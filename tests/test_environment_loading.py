@@ -1,0 +1,23 @@
+import os
+from pathlib import Path
+
+from engineering_ops.config import LOADED_ENV_FILES, PROJECT_ROOT, configuration_report
+
+
+def test_environment_paths_are_project_rooted():
+    for loaded in LOADED_ENV_FILES:
+        assert Path(loaded).parent == PROJECT_ROOT
+
+
+def test_configuration_report_is_secret_safe():
+    report = configuration_report()
+    serialized = repr(report)
+    for name in (
+        "JIRA_CLOUD_API_TOKEN",
+        "JIRA_ONPREM_PAT",
+        "JIRA_ONPREM_PASSWORD",
+        "MCP_BEARER_TOKEN",
+    ):
+        value = os.getenv(name)
+        if value:
+            assert value not in serialized

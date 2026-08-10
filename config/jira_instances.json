@@ -1,0 +1,26 @@
+{
+  "cloud": {
+    "type": "cloud",
+    "base_url": "https://cisco-sbg.atlassian.net",
+    "credentials": "cloud",
+    "default_project": "MUON",
+    "quarter_field_name": "Fix versions",
+    "story_points_field_name": "Story Points",
+    "default_board_id": 1,
+    "sprint_capacity_points": 70,
+    "sprint_capacity_buffer_percent": 15,
+    "verify_ssl": true
+  },
+  "onprem": {
+    "type": "datacenter",
+    "base_url": "https://jira-eng-gpk2.cisco.com",
+    "credentials": "onprem",
+    "default_project": "WXCNP",
+    "quarter_field_name": "Target Quarter",
+    "story_points_field_name": "Story Points",
+    "default_board_id": 22,
+    "sprint_capacity_points": 50,
+    "sprint_capacity_buffer_percent": 15,
+    "verify_ssl": true
+  }
+}
