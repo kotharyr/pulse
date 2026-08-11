@@ -1,4 +1,6 @@
-from engineering_ops.config import PROJECT_ROOT, JiraInstanceConfig, settings
+import pytest
+
+from engineering_ops.config import PROJECT_ROOT, JiraInstanceConfig, Settings, settings
 
 
 def test_url_trim():
@@ -24,3 +26,13 @@ def test_api_version_is_inferred():
 def test_legacy_kind_is_migrated():
     cfg = JiraInstanceConfig.model_validate({"kind": "cloud", "base_url": "https://x", "credentials": "cloud"})
     assert cfg.instance_type == "cloud"
+
+
+def test_instance_config_rejects_unknown_keys():
+    with pytest.raises(ValueError):
+        JiraInstanceConfig.model_validate({"type": "cloud", "base_url": "https://x", "typo": True})
+
+
+def test_settings_default_to_loopback():
+    isolated = Settings(_env_file=None, MCP_HOST="127.0.0.1", BULK_BATCH_SIZE=50)
+    assert isolated.mcp_host == "127.0.0.1"

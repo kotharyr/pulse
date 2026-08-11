@@ -85,6 +85,9 @@ Health endpoint:
 curl -s http://127.0.0.1:8080/health | python3 -m json.tool
 ```
 
+`/health` is a readiness check and authenticates to each configured Jira instance. Use
+`/health/live` for a dependency-free liveness check.
+
 MCP endpoint:
 
 ```text
@@ -106,6 +109,26 @@ Allows reversible Jira field updates such as Target Quarter assignments. Sprint 
 Required for sprint-close execution, issue creation during splits, source transitions, moving issues between sprints, and closing the sprint.
 
 Always run `preview_close_sprint` immediately before `apply_close_sprint`.
+
+## MCP authentication
+
+Local loopback development may omit `MCP_BEARER_TOKEN`. A non-loopback `MCP_HOST`
+is rejected at startup unless a bearer token is configured. Clients must send that
+token as `Authorization: Bearer <token>` to `/mcp`. Set `MCP_PUBLIC_URL` to the
+deployment's public HTTPS origin so MCP authentication metadata uses the external URL.
+Container deployments must set `MCP_HOST=0.0.0.0`, a non-empty bearer token, and
+their public URL explicitly.
+
+## Plugin architecture
+
+The server is composed from ordered capability plugins in
+`engineering_ops.plugins`. Built-in system, Jira, and repository plugins keep their
+existing MCP tool names. Additional capability packages can implement `MCPPlugin`
+and register tools or custom routes without modifying the server core.
+
+Jira platform differences are provider plugins registered by instance type. Cloud
+uses the v3 platform API; Data Center and Server use v2. A separately packaged
+provider can be installed with `register_jira_provider()`.
 
 ## Sprint capacity
 

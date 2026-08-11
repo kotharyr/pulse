@@ -1,31 +1,128 @@
 from __future__ import annotations
 
-from typing import Any
+from threading import RLock
+from typing import Any, Protocol
+
 import httpx
 
-from engineering_ops.config import JiraInstanceConfig, resolve_credentials, settings
+from engineering_ops.config import JiraInstanceConfig, ResolvedCredential, resolve_credentials, settings
 
 
 class JiraError(RuntimeError):
     pass
 
 
+class JiraProviderPlugin(Protocol):
+    """Platform-specific Jira behavior registered by instance type."""
+
+    name: str
+    api_version: str
+
+    def authentication(self, credential: ResolvedCredential) -> tuple[dict[str, str], Any]: ...
+
+    def projects(self, jira: "JiraClient", limit: int) -> Any: ...
+
+    def search(self, jira: "JiraClient", jql: str, fields: list[str], limit: int) -> list[dict[str, Any]]: ...
+
+
+def _authentication(credential: ResolvedCredential) -> tuple[dict[str, str], Any]:
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    auth = None
+    if credential.method in {"cloud_api_token", "basic_fallback"}:
+        auth = (credential.username or "", credential.secret)
+    elif credential.method == "personal_access_token":
+        headers["Authorization"] = f"Bearer {credential.secret}"
+    elif credential.method == "legacy":
+        if credential.username:
+            auth = (credential.username, credential.secret)
+        else:
+            headers["Authorization"] = f"Bearer {credential.secret}"
+    return headers, auth
+
+
+class CloudJiraProvider:
+    name = "cloud"
+    api_version = "3"
+
+    authentication = staticmethod(_authentication)
+
+    def projects(self, jira: "JiraClient", limit: int) -> Any:
+        data = jira.request("GET", "/rest/api/3/project/search", params={"maxResults": limit})
+        return data.get("values", [])
+
+    def search(self, jira: "JiraClient", jql: str, fields: list[str], limit: int) -> list[dict[str, Any]]:
+        issues: list[dict[str, Any]] = []
+        token = None
+        while len(issues) < limit:
+            payload: dict[str, Any] = {
+                "jql": jql,
+                "maxResults": min(100, limit - len(issues)),
+                "fields": fields,
+            }
+            if token:
+                payload["nextPageToken"] = token
+            data = jira.request("POST", "/rest/api/3/search/jql", json=payload)
+            batch = data.get("issues", [])
+            issues.extend(batch)
+            next_token = data.get("nextPageToken")
+            if not batch or not next_token:
+                break
+            if next_token == token:
+                raise JiraError(f"{jira.name}: Cloud search returned a repeated nextPageToken")
+            token = next_token
+        return issues
+
+
+class DataCenterJiraProvider:
+    name = "datacenter"
+    api_version = "2"
+
+    authentication = staticmethod(_authentication)
+
+    def projects(self, jira: "JiraClient", limit: int) -> Any:
+        data = jira.request("GET", "/rest/api/2/project")
+        return data[:limit] if isinstance(data, list) else data
+
+    def search(self, jira: "JiraClient", jql: str, fields: list[str], limit: int) -> list[dict[str, Any]]:
+        issues: list[dict[str, Any]] = []
+        start = 0
+        while len(issues) < limit:
+            payload = {
+                "jql": jql,
+                "startAt": start,
+                "maxResults": min(100, limit - len(issues)),
+                "fields": fields,
+            }
+            data = jira.request("POST", "/rest/api/2/search", json=payload)
+            batch = data.get("issues", [])
+            issues.extend(batch)
+            start += len(batch)
+            if not batch or start >= data.get("total", 0):
+                break
+        return issues
+
+
+JIRA_PROVIDER_PLUGINS: dict[str, JiraProviderPlugin] = {
+    "cloud": CloudJiraProvider(),
+    "datacenter": DataCenterJiraProvider(),
+    "server": DataCenterJiraProvider(),
+}
+
+
+def register_jira_provider(instance_type: str, provider: JiraProviderPlugin) -> None:
+    """Register or replace a Jira provider, enabling separately packaged adapters."""
+    JIRA_PROVIDER_PLUGINS[instance_type] = provider
+
+
 class JiraClient:
     def __init__(self, name: str, cfg: JiraInstanceConfig):
         self.name, self.cfg = name, cfg
+        try:
+            self.provider = JIRA_PROVIDER_PLUGINS[cfg.instance_type]
+        except KeyError as exc:
+            raise JiraError(f"No Jira provider registered for {cfg.instance_type!r}") from exc
         credential = resolve_credentials(name, cfg)
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        auth = None
-
-        if credential.method in {"cloud_api_token", "basic_fallback"}:
-            auth = (credential.username or "", credential.secret)
-        elif credential.method == "personal_access_token":
-            headers["Authorization"] = f"Bearer {credential.secret}"
-        elif credential.method == "legacy":
-            if credential.username:
-                auth = (credential.username, credential.secret)
-            else:
-                headers["Authorization"] = f"Bearer {credential.secret}"
+        headers, auth = self.provider.authentication(credential)
 
         self.http = httpx.Client(
             base_url=cfg.base_url,
@@ -38,7 +135,10 @@ class JiraClient:
 
     @property
     def platform_api_version(self) -> str:
-        return self.cfg.api_version
+        return self.provider.api_version
+
+    def close(self) -> None:
+        self.http.close()
 
     def request(self, method: str, path: str, **kwargs: Any) -> Any:
         try:
@@ -75,42 +175,12 @@ class JiraClient:
         return self.request("GET", f"/rest/api/{self.platform_api_version}/field")
 
     def projects(self, limit: int = 200):
-        if self.cfg.kind == "cloud":
-            data = self.request("GET", "/rest/api/3/project/search", params={"maxResults": limit})
-            return data.get("values", [])
-        data = self.request("GET", f"/rest/api/{self.platform_api_version}/project")
-        return data[:limit] if isinstance(data, list) else data
+        return self.provider.projects(self, limit)
 
     def search(self, jql: str, fields: list[str], limit: int = 500):
-        issues: list[dict[str, Any]] = []
-        if self.cfg.kind == "cloud":
-            token = None
-            while len(issues) < limit:
-                payload = {"jql": jql, "maxResults": min(100, limit - len(issues)), "fields": fields}
-                if token:
-                    payload["nextPageToken"] = token
-                data = self.request("POST", "/rest/api/3/search/jql", json=payload)
-                batch = data.get("issues", [])
-                issues.extend(batch)
-                token = data.get("nextPageToken")
-                if not batch or not token:
-                    break
-        else:
-            start = 0
-            while len(issues) < limit:
-                payload = {
-                    "jql": jql,
-                    "startAt": start,
-                    "maxResults": min(100, limit - len(issues)),
-                    "fields": fields,
-                }
-                data = self.request("POST", "/rest/api/2/search", json=payload)
-                batch = data.get("issues", [])
-                issues.extend(batch)
-                start += len(batch)
-                if not batch or start >= data.get("total", 0):
-                    break
-        return issues
+        if limit <= 0:
+            return []
+        return self.provider.search(self, jql, fields, limit)
 
     def get_issue(self, key: str, fields: list[str] | None = None):
         params = {"fields": ",".join(fields)} if fields else None
@@ -131,17 +201,20 @@ class JiraClient:
     def update_sprint(self, sprint_id: int, fields: dict[str, Any]):
         return self.request("POST", f"/rest/agile/1.0/sprint/{sprint_id}", json=fields)
 
-    def sprint_issues(self, sprint_id: int, limit: int = 1000):
+    def sprint_issues(self, sprint_id: int, limit: int = 1000, story_points_field_id: str | None = None):
         fields = [
             "summary", "description", "status", "assignee", "issuetype", "project",
-            "parent", "labels", self.cfg.story_points_field_name,
+            "parent", "labels",
         ]
+        if story_points_field_id:
+            fields.append(story_points_field_id)
         return self.search(f"sprint = {sprint_id}", fields, limit)
 
     def move_issues_to_sprint(self, sprint_id: int, issue_keys: list[str]):
         results = []
-        for i in range(0, len(issue_keys), 50):
-            batch = issue_keys[i:i + 50]
+        batch_size = min(settings.bulk_batch_size, 50)
+        for i in range(0, len(issue_keys), batch_size):
+            batch = issue_keys[i:i + batch_size]
             self.request("POST", f"/rest/agile/1.0/sprint/{sprint_id}/issue", json={"issues": batch})
             results.append({"count": len(batch), "issues": batch})
         return results
@@ -167,3 +240,27 @@ class JiraClient:
                 break
             start += len(batch)
         return rows
+
+
+class JiraClientManager:
+    """Owns reusable Jira clients and closes them as one lifecycle unit."""
+
+    def __init__(self):
+        self._clients: dict[str, JiraClient] = {}
+        self._lock = RLock()
+
+    def get(self, name: str, cfg: JiraInstanceConfig) -> JiraClient:
+        with self._lock:
+            current = self._clients.get(name)
+            if current is None or current.cfg != cfg:
+                if current is not None:
+                    current.close()
+                current = JiraClient(name, cfg)
+                self._clients[name] = current
+            return current
+
+    def close(self) -> None:
+        with self._lock:
+            for jira in self._clients.values():
+                jira.close()
+            self._clients.clear()

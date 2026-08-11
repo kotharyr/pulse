@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from dotenv import dotenv_values
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -66,7 +66,7 @@ class JiraInstanceConfig(BaseModel):
     legacy_auth: LegacyAuthConfig | None = Field(default=None, alias="auth", exclude=True)
     legacy_api_version: str | None = Field(default=None, alias="api_version", exclude=True)
 
-    model_config = {"populate_by_name": True, "extra": "ignore"}
+    model_config = {"populate_by_name": True, "extra": "forbid"}
 
     @model_validator(mode="before")
     @classmethod
@@ -79,6 +79,14 @@ class JiraInstanceConfig(BaseModel):
     @model_validator(mode="after")
     def clean(self) -> "JiraInstanceConfig":
         self.base_url = self.base_url.rstrip("/")
+        if not self.base_url.startswith(("https://", "http://")):
+            raise ValueError("base_url must use http:// or https://")
+        if self.sprint_capacity_points is not None and self.sprint_capacity_points <= 0:
+            raise ValueError("sprint_capacity_points must be greater than zero")
+        if self.sprint_capacity_issue_count is not None and self.sprint_capacity_issue_count <= 0:
+            raise ValueError("sprint_capacity_issue_count must be greater than zero")
+        if not 0 <= self.sprint_capacity_buffer_percent < 100:
+            raise ValueError("sprint_capacity_buffer_percent must be between 0 and 100")
         if not self.credentials:
             # Credential reference defaults to instance name later in Settings.jira_instances().
             self.credentials = None
@@ -106,15 +114,44 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=None, extra="ignore", populate_by_name=True)
 
     mode: Literal["recommend_only", "safe_apply", "approved_destructive"] = Field("recommend_only", alias="MODE")
-    mcp_host: str = Field("0.0.0.0", alias="MCP_HOST")
+    mcp_host: str = Field("127.0.0.1", alias="MCP_HOST")
     mcp_port: int = Field(8080, alias="MCP_PORT")
     mcp_bearer_token: str | None = Field(None, alias="MCP_BEARER_TOKEN")
+    mcp_public_url: str | None = Field(None, alias="MCP_PUBLIC_URL")
     jira_instances_file: str = Field("config/jira_instances.json", alias="JIRA_INSTANCES_FILE")
     request_timeout_seconds: float = Field(60, alias="REQUEST_TIMEOUT_SECONDS")
     max_search_results: int = Field(5000, alias="MAX_SEARCH_RESULTS")
-    bulk_batch_size: int = Field(500, alias="BULK_BATCH_SIZE")
+    bulk_batch_size: int = Field(50, alias="BULK_BATCH_SIZE")
     local_repo_root: str | None = Field(None, alias="LOCAL_REPO_ROOT")
     security_issue_summary_marker: str = Field("Operational Security Issue", alias="SECURITY_ISSUE_SUMMARY_MARKER")
+
+    @field_validator("mcp_port")
+    @classmethod
+    def valid_port(cls, value: int) -> int:
+        if not 1 <= value <= 65535:
+            raise ValueError("MCP_PORT must be between 1 and 65535")
+        return value
+
+    @field_validator("request_timeout_seconds")
+    @classmethod
+    def positive_timeout(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("REQUEST_TIMEOUT_SECONDS must be greater than zero")
+        return value
+
+    @field_validator("max_search_results")
+    @classmethod
+    def positive_search_limit(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("MAX_SEARCH_RESULTS must be greater than zero")
+        return value
+
+    @field_validator("bulk_batch_size")
+    @classmethod
+    def valid_bulk_batch_size(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("BULK_BATCH_SIZE must be greater than zero")
+        return value
 
     @property
     def jira_instances_path(self) -> Path:
@@ -270,13 +307,29 @@ def configuration_report() -> dict[str, Any]:
         warnings.append(
             f"No .env or .env.local file was found under project root {PROJECT_ROOT}; only process environment variables are available."
         )
+    if settings.bulk_batch_size > 50:
+        warnings.append(
+            f"BULK_BATCH_SIZE={settings.bulk_batch_size} exceeds Jira's limit and will be capped at 50."
+        )
+
+    loopback_hosts = {"127.0.0.1", "localhost", "::1"}
+    if settings.mcp_host not in loopback_hosts and not settings.mcp_bearer_token:
+        errors.append("MCP_BEARER_TOKEN is required when MCP_HOST is not a loopback address.")
+    elif settings.mcp_host in loopback_hosts and not settings.mcp_bearer_token:
+        warnings.append("MCP bearer authentication is disabled for loopback-only development.")
+    if settings.mcp_host not in loopback_hosts and not settings.mcp_public_url:
+        warnings.append("MCP_PUBLIC_URL should be set for correct deployed authentication metadata.")
 
     return {
         "ok": not errors,
         "project_root": str(PROJECT_ROOT),
         "loaded_env_files": LOADED_ENV_FILES,
         "mode": settings.mode,
-        "mcp": {"host": settings.mcp_host, "port": settings.mcp_port},
+        "mcp": {
+            "host": settings.mcp_host,
+            "port": settings.mcp_port,
+            "authentication_required": bool(settings.mcp_bearer_token),
+        },
         "jira_instances_file": str(settings.jira_instances_path),
         "instances": instances_report,
         "local_repo_root": str(repo_path) if repo_path else None,

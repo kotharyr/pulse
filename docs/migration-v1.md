@@ -43,3 +43,7 @@ python scripts/migrate_config_v1.py
 ```
 
 The script backs up the previous file as `config/jira_instances.pre-v1.json` before changing it.
+
+If a legacy `auth` block uses environment-variable names that do not match the new
+credential convention, the migration preserves that block and prints a warning.
+This keeps existing credentials working until they are renamed deliberately.
