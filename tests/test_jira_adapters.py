@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from engineering_ops.adapters.jira import (
     CloudJiraProvider,
     DataCenterJiraProvider,
+    JiraError,
     JiraClient,
     JiraClientManager,
 )
@@ -18,7 +19,14 @@ class FakeJira:
 
     def request(self, method, path, **kwargs):
         self.calls.append((method, path, kwargs))
-        return next(self.responses)
+        response = next(self.responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    def get_issue(self, key, fields=None):
+        params = {"fields": ",".join(fields)} if fields else None
+        return self.request("GET", f"/rest/api/2/issue/{key}", params=params)
 
 
 def test_cloud_provider_uses_v3_token_pagination():
@@ -40,6 +48,34 @@ def test_datacenter_provider_uses_v2_offset_pagination():
     rows = DataCenterJiraProvider().search(jira, "project = A", ["summary"], 10)
     assert [row["key"] for row in rows] == ["A-1", "A-2"]
     assert jira.calls[1][2]["json"]["startAt"] == 1
+
+
+def test_datacenter_provider_retries_search_with_get_on_post_404():
+    jira = FakeJira([
+        JiraError("test: POST /rest/api/2/search -> 404", status_code=404),
+        {"issues": [{"key": "A-1"}], "total": 1},
+    ])
+
+    rows = DataCenterJiraProvider().search(jira, "project = A", ["summary", "status"], 10)
+
+    assert rows == [{"key": "A-1"}]
+    assert jira.calls[0][:2] == ("POST", "/rest/api/2/search")
+    assert jira.calls[1][:2] == ("GET", "/rest/api/2/search")
+    assert jira.calls[1][2]["params"]["fields"] == "summary,status"
+
+
+def test_datacenter_provider_uses_direct_issue_lookup_when_search_resource_is_unavailable():
+    jira = FakeJira([
+        JiraError("test: POST /rest/api/2/search -> 404", status_code=404),
+        JiraError("test: GET /rest/api/2/search -> 404", status_code=404),
+        {"key": "WXCNP-78909", "fields": {"summary": "Target issue"}},
+    ])
+
+    rows = DataCenterJiraProvider().search(jira, 'issue = "WXCNP-78909" ORDER BY updated DESC', ["summary"], 10)
+
+    assert rows == [{"key": "WXCNP-78909", "fields": {"summary": "Target issue"}}]
+    assert jira.calls[2][:2] == ("GET", "/rest/api/2/issue/WXCNP-78909")
+    assert jira.calls[2][2]["params"] == {"fields": "summary"}
 
 
 def test_sprint_issues_requests_resolved_story_point_id():

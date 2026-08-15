@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from threading import RLock
 from typing import Any, Protocol
 
@@ -9,7 +10,20 @@ from engineering_ops.config import JiraInstanceConfig, ResolvedCredential, resol
 
 
 class JiraError(RuntimeError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        method: str | None = None,
+        path: str | None = None,
+        response_text: str | None = None,
+    ):
+        super().__init__(message)
+        self.status_code = status_code
+        self.method = method
+        self.path = path
+        self.response_text = response_text
 
 
 class JiraProviderPlugin(Protocol):
@@ -40,6 +54,22 @@ def _authentication(credential: ResolvedCredential) -> tuple[dict[str, str], Any
         else:
             headers["Authorization"] = f"Bearer {credential.secret}"
     return headers, auth
+
+
+EXACT_ISSUE_JQL_RE = re.compile(
+    r"^\s*(?:issue|issuekey|key)\s*=\s*(?:\"([^\"]+)\"|'([^']+)'|([A-Z][A-Z0-9_]*-\d+))(?:\s+ORDER\s+BY\s+.+)?\s*$",
+    re.I,
+)
+
+
+def _single_issue_key_from_jql(jql: str) -> str | None:
+    match = EXACT_ISSUE_JQL_RE.match(jql)
+    if not match:
+        return None
+    candidate = next((group for group in match.groups() if group), "").strip()
+    if re.fullmatch(r"[A-Z][A-Z0-9_]*-\d+", candidate, re.I):
+        return candidate.upper()
+    return None
 
 
 class CloudJiraProvider:
@@ -100,17 +130,42 @@ class DataCenterJiraProvider:
         data = jira.request("GET", "/rest/api/2/project")
         return data[:limit] if isinstance(data, list) else data
 
+    def _search_page(self, jira: "JiraClient", jql: str, fields: list[str], start: int, max_results: int) -> Any:
+        payload = {
+            "jql": jql,
+            "startAt": start,
+            "maxResults": max_results,
+            "fields": fields,
+        }
+        try:
+            return jira.request("POST", "/rest/api/2/search", json=payload)
+        except JiraError as exc:
+            if exc.status_code != 404:
+                raise
+            params = {
+                "jql": jql,
+                "startAt": start,
+                "maxResults": max_results,
+                "fields": ",".join(fields),
+            }
+            try:
+                return jira.request("GET", "/rest/api/2/search", params=params)
+            except JiraError as get_exc:
+                if get_exc.status_code == 404:
+                    raise get_exc from exc
+                raise
+
     def search(self, jira: "JiraClient", jql: str, fields: list[str], limit: int) -> list[dict[str, Any]]:
         issues: list[dict[str, Any]] = []
         start = 0
         while len(issues) < limit:
-            payload = {
-                "jql": jql,
-                "startAt": start,
-                "maxResults": min(100, limit - len(issues)),
-                "fields": fields,
-            }
-            data = jira.request("POST", "/rest/api/2/search", json=payload)
+            try:
+                data = self._search_page(jira, jql, fields, start, min(100, limit - len(issues)))
+            except JiraError as exc:
+                issue_key = _single_issue_key_from_jql(jql)
+                if exc.status_code == 404 and issue_key and not issues:
+                    return [jira.get_issue(issue_key, fields)]
+                raise
             batch = data.get("issues", [])
             issues.extend(batch)
             start += len(batch)
@@ -161,16 +216,26 @@ class JiraClient:
         try:
             r = self.http.request(method, path, **kwargs)
         except httpx.HTTPError as exc:
-            raise JiraError(f"{self.name}: {method} {path} -> network error: {exc}") from exc
+            raise JiraError(f"{self.name}: {method} {path} -> network error: {exc}", method=method, path=path) from exc
 
         if 300 <= r.status_code < 400:
             location = r.headers.get("location", "<missing Location header>")
             raise JiraError(
                 f"{self.name}: {method} {path} -> {r.status_code} redirect to {location}. "
-                "Redirects are not followed automatically so credentials are never forwarded to an unexpected host."
+                "Redirects are not followed automatically so credentials are never forwarded to an unexpected host.",
+                status_code=r.status_code,
+                method=method,
+                path=path,
+                response_text=r.text[:1200],
             )
         if r.status_code >= 400:
-            raise JiraError(f"{self.name}: {method} {path} -> {r.status_code}: {r.text[:1200]}")
+            raise JiraError(
+                f"{self.name}: {method} {path} -> {r.status_code}: {r.text[:1200]}",
+                status_code=r.status_code,
+                method=method,
+                path=path,
+                response_text=r.text[:1200],
+            )
         if not r.content:
             return {}
 

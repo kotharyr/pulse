@@ -11,7 +11,12 @@ class FakeConsoleBackend:
 
     def list_jira_instances(self):
         self.calls.append(("instances",))
-        return {"instances": [{"name": "cloud", "kind": "cloud"}, {"name": "onprem", "kind": "datacenter"}]}
+        return {
+            "instances": [
+                {"name": "cloud", "kind": "cloud", "default_project": "ENG"},
+                {"name": "onprem", "kind": "datacenter", "default_project": "OPS"},
+            ]
+        }
 
     def search_issues_page(self, instance, jql, fields=None, page=1, page_size=25):
         self.calls.append(("issues", instance, jql, page, page_size))
@@ -103,7 +108,10 @@ def test_console_static_assets_are_served(monkeypatch):
 
     assert index.status_code == 200
     assert "Ops Console" in index.text
+    assert 'value="updated >= -30d ORDER BY updated DESC"' in index.text
+    assert 'value="ORDER BY updated DESC"' not in index.text
     assert script.status_code == 200
     assert "previewCloseSprint" in script.text
+    assert "defaultJqlForInstance" in script.text
     assert styles.status_code == 200
     assert ".metric-grid" in styles.text

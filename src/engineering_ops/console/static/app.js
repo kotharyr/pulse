@@ -1,9 +1,13 @@
+const FALLBACK_DEFAULT_JQL = "updated >= -30d ORDER BY updated DESC";
+
 const state = {
   instance: "cloud",
+  instances: [],
   page: 1,
   pageSize: 25,
   currentPreviewId: null,
   savedViews: [],
+  jqlTouched: false,
 };
 
 const els = {
@@ -82,6 +86,22 @@ function fieldValue(issue, name) {
   return value ?? "";
 }
 
+function quoteJqlValue(value) {
+  const text = String(value || "").trim();
+  if (/^[A-Z][A-Z0-9_]*$/.test(text)) {
+    return text;
+  }
+  return `"${text.replaceAll('"', '\\"')}"`;
+}
+
+function defaultJqlForInstance(instanceName) {
+  const row = state.instances.find((item) => item.name === instanceName);
+  if (row?.default_project) {
+    return `project = ${quoteJqlValue(row.default_project)} ORDER BY updated DESC`;
+  }
+  return FALLBACK_DEFAULT_JQL;
+}
+
 function loadViews() {
   try {
     state.savedViews = JSON.parse(localStorage.getItem("engineeringOpsConsole.views.v1") || "[]");
@@ -118,12 +138,16 @@ async function loadInstances() {
   try {
     const data = await api("/api/instances");
     if (!data.instances?.length) return;
+    state.instances = data.instances;
     els.instance.innerHTML = data.instances.map((row) => {
       const label = row.kind === "cloud" ? "Cloud" : row.kind === "datacenter" || row.kind === "server" ? "On-Prem" : row.name;
       return `<option value="${escapeHtml(row.name)}">${escapeHtml(label)} (${escapeHtml(row.name)})</option>`;
     }).join("");
     state.instance = data.instances[0].name;
     els.instance.value = state.instance;
+    if (!state.jqlTouched) {
+      els.jql.value = defaultJqlForInstance(state.instance);
+    }
   } catch (error) {
     toast(error.message);
   }
@@ -378,6 +402,12 @@ function saveView() {
 els.instance.addEventListener("change", () => {
   state.instance = els.instance.value;
   state.page = 1;
+  if (!state.jqlTouched) {
+    els.jql.value = defaultJqlForInstance(state.instance);
+  }
+});
+els.jql.addEventListener("input", () => {
+  state.jqlTouched = true;
 });
 els.search.addEventListener("click", () => {
   state.page = 1;
