@@ -20,6 +20,8 @@ class JiraProviderPlugin(Protocol):
 
     def authentication(self, credential: ResolvedCredential) -> tuple[dict[str, str], Any]: ...
 
+    def description_value(self, text: str) -> Any: ...
+
     def projects(self, jira: "JiraClient", limit: int) -> Any: ...
 
     def search(self, jira: "JiraClient", jql: str, fields: list[str], limit: int) -> list[dict[str, Any]]: ...
@@ -45,6 +47,18 @@ class CloudJiraProvider:
     api_version = "3"
 
     authentication = staticmethod(_authentication)
+
+    def description_value(self, text: str) -> Any:
+        return {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": line}]}
+                if line
+                else {"type": "paragraph", "content": []}
+                for line in text.splitlines()
+            ],
+        }
 
     def projects(self, jira: "JiraClient", limit: int) -> Any:
         data = jira.request("GET", "/rest/api/3/project/search", params={"maxResults": limit})
@@ -78,6 +92,9 @@ class DataCenterJiraProvider:
     api_version = "2"
 
     authentication = staticmethod(_authentication)
+
+    def description_value(self, text: str) -> Any:
+        return text
 
     def projects(self, jira: "JiraClient", limit: int) -> Any:
         data = jira.request("GET", "/rest/api/2/project")
@@ -194,6 +211,26 @@ class JiraClient:
 
     def create_issue(self, fields: dict[str, Any]):
         return self.request("POST", f"/rest/api/{self.platform_api_version}/issue", json={"fields": fields})
+
+    def description_value(self, text: str) -> Any:
+        return self.provider.description_value(text)
+
+    def transition_issue_to_status(self, issue_key: str, status_name: str) -> dict[str, Any]:
+        data = self.request("GET", f"/rest/api/{self.platform_api_version}/issue/{issue_key}/transitions")
+        matches = [
+            transition
+            for transition in data.get("transitions", [])
+            if ((transition.get("to") or {}).get("name") or "").casefold() == status_name.casefold()
+        ]
+        if len(matches) != 1:
+            names = sorted({((transition.get("to") or {}).get("name") or "") for transition in matches if transition.get("to")})
+            raise ValueError(f"Could not resolve transition to {status_name!r} for {issue_key}; matching statuses={names}")
+        self.request(
+            "POST",
+            f"/rest/api/{self.platform_api_version}/issue/{issue_key}/transitions",
+            json={"transition": {"id": matches[0]["id"]}},
+        )
+        return {"issue_key": issue_key, "to_status": status_name}
 
     def sprint(self, sprint_id: int):
         return self.request("GET", f"/rest/agile/1.0/sprint/{sprint_id}")

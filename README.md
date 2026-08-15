@@ -108,7 +108,10 @@ Allows reversible Jira field updates such as Target Quarter assignments. Sprint 
 
 Required for sprint-close execution, issue creation during splits, source transitions, moving issues between sprints, and closing the sprint.
 
-Always run `preview_close_sprint` immediately before `apply_close_sprint`.
+Always run `preview_field_updates` or `preview_close_sprint` immediately before
+the corresponding apply tool. The shared backend tracks a preview digest so
+non-MCP clients can enforce the same reviewed-plan check without changing MCP
+tool signatures.
 
 ## MCP authentication
 

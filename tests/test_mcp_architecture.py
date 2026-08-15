@@ -18,6 +18,27 @@ def test_plugin_composition_preserves_tool_names():
     assert {"system_readiness", "search_issues", "scan_repository_packages"} <= names
 
 
+def test_mcp_tool_surface_preserves_public_apply_contracts():
+    server = create_mcp_server(validate_configuration=False)
+    tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
+
+    for name in ("apply_field_updates", "assign_to_quarter", "apply_close_sprint"):
+        assert "preview_id" not in tools[name].inputSchema["properties"]
+
+    assert (
+        tools["apply_field_updates"].description
+        == "Apply a previously understood reversible field update. Blocked in recommend_only mode."
+    )
+    assert (
+        tools["preview_close_sprint"].description
+        == "Preview sprint closure, rollover, issue splitting, and next-sprint overcommit. Never writes. split_plans may include source_issue_key, new_summary, new_description, story_points, new_issue_type, parent_key, and source_transition_status."
+    )
+    assert (
+        tools["apply_close_sprint"].description
+        == "Execute an explicitly approved sprint-close plan. Requires MODE=approved_destructive. Creates follow-on issues, transitions split sources, moves rollover work, then closes the sprint."
+    )
+
+
 def test_static_bearer_token_verifier():
     verifier = StaticBearerTokenVerifier("correct")
     assert asyncio.run(verifier.verify_token("wrong")) is None
@@ -88,6 +109,6 @@ def test_sprint_report_resolves_story_point_field_before_search(monkeypatch):
             assert story_points_field_id == "customfield_10016"
             return []
 
-    monkeypatch.setattr(server_module, "client", lambda instance: FakeJira())
+    monkeypatch.setattr(server_module.backend, "client_getter", lambda instance: FakeJira())
     report = server_module.report_sprint_progress("cloud", 42)
     assert report["story_points"] == 0

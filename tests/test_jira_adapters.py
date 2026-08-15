@@ -83,3 +83,28 @@ def test_client_manager_reuses_and_closes_clients(monkeypatch):
     manager.close()
     assert len(created) == 1 and created[0].closed
 
+
+def test_description_value_is_provider_specific():
+    assert DataCenterJiraProvider().description_value("hello") == "hello"
+    cloud_value = CloudJiraProvider().description_value("hello")
+    assert cloud_value["type"] == "doc"
+    assert cloud_value["content"][0]["content"][0]["text"] == "hello"
+
+
+def test_transition_issue_to_status_does_not_return_transition_id():
+    jira = object.__new__(JiraClient)
+    jira.name = "test"
+    jira.provider = DataCenterJiraProvider()
+    calls = []
+
+    def request(method, path, **kwargs):
+        calls.append((method, path, kwargs))
+        if method == "GET":
+            return {"transitions": [{"id": "31", "to": {"name": "Done"}}]}
+        return {}
+
+    jira.request = request
+    result = JiraClient.transition_issue_to_status(jira, "ENG-1", "Done")
+
+    assert result == {"issue_key": "ENG-1", "to_status": "Done"}
+    assert calls[1][2]["json"] == {"transition": {"id": "31"}}
