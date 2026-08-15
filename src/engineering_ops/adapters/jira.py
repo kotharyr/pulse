@@ -212,28 +212,41 @@ class JiraClient:
     def close(self) -> None:
         self.http.close()
 
-    def request(self, method: str, path: str, **kwargs: Any) -> Any:
+    def _request_path_candidates(self, path: str) -> list[str]:
+        normalized = path.lstrip("/")
+        candidates = [normalized]
+        base_path = httpx.URL(self.cfg.base_url).path.strip("/")
+        if (
+            self.cfg.instance_type in {"datacenter", "server"}
+            and not base_path
+            and normalized.startswith(("rest/api/", "rest/agile/"))
+        ):
+            candidates.append(f"jira/{normalized}")
+        return candidates
+
+    def _request_once(self, method: str, path: str, **kwargs: Any) -> Any:
+        display_path = f"/{path.lstrip('/')}"
         try:
             r = self.http.request(method, path, **kwargs)
         except httpx.HTTPError as exc:
-            raise JiraError(f"{self.name}: {method} {path} -> network error: {exc}", method=method, path=path) from exc
+            raise JiraError(f"{self.name}: {method} {display_path} -> network error: {exc}", method=method, path=display_path) from exc
 
         if 300 <= r.status_code < 400:
             location = r.headers.get("location", "<missing Location header>")
             raise JiraError(
-                f"{self.name}: {method} {path} -> {r.status_code} redirect to {location}. "
+                f"{self.name}: {method} {display_path} -> {r.status_code} redirect to {location}. "
                 "Redirects are not followed automatically so credentials are never forwarded to an unexpected host.",
                 status_code=r.status_code,
                 method=method,
-                path=path,
+                path=display_path,
                 response_text=r.text[:1200],
             )
         if r.status_code >= 400:
             raise JiraError(
-                f"{self.name}: {method} {path} -> {r.status_code}: {r.text[:1200]}",
+                f"{self.name}: {method} {display_path} -> {r.status_code}: {r.text[:1200]}",
                 status_code=r.status_code,
                 method=method,
-                path=path,
+                path=display_path,
                 response_text=r.text[:1200],
             )
         if not r.content:
@@ -243,12 +256,26 @@ class JiraClient:
         if "json" not in content_type:
             preview = r.text[:500].replace("\n", " ")
             raise JiraError(
-                f"{self.name}: {method} {path} returned non-JSON content-type {content_type or '<none>'}: {preview}"
+                f"{self.name}: {method} {display_path} returned non-JSON content-type {content_type or '<none>'}: {preview}"
             )
         try:
             return r.json()
         except ValueError as exc:
-            raise JiraError(f"{self.name}: {method} {path} returned invalid JSON: {r.text[:500]}") from exc
+            raise JiraError(f"{self.name}: {method} {display_path} returned invalid JSON: {r.text[:500]}") from exc
+
+    def request(self, method: str, path: str, **kwargs: Any) -> Any:
+        last_not_found: JiraError | None = None
+        for request_path in self._request_path_candidates(path):
+            try:
+                return self._request_once(method, request_path, **kwargs)
+            except JiraError as exc:
+                if exc.status_code == 404:
+                    last_not_found = exc
+                    continue
+                raise
+        if last_not_found:
+            raise last_not_found
+        raise JiraError(f"{self.name}: {method} {path} could not be sent", method=method, path=path)
 
     def myself(self):
         return self.request("GET", f"/rest/api/{self.platform_api_version}/myself")

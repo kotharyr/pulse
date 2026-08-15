@@ -8,7 +8,11 @@ class FakePagedJira:
     name = "fake"
     cfg = SimpleNamespace(story_points_field_name="Story Points")
 
+    def __init__(self):
+        self.fields_called = False
+
     def fields(self):
+        self.fields_called = True
         return [{"id": "customfield_10016", "name": "Story Points"}]
 
     def search(self, jql, fields, limit):
@@ -26,10 +30,12 @@ class FakePagedJira:
 
 
 def test_issue_search_page_paginates_and_sanitizes_field_ids():
-    backend = EngineeringOpsBackend(client_getter=lambda instance: FakePagedJira())
+    jira = FakePagedJira()
+    backend = EngineeringOpsBackend(client_getter=lambda instance: jira)
 
     page = backend.search_issues_page("fake", "project = ENG", page=2, page_size=2)
 
+    assert jira.fields_called is False
     assert [issue["key"] for issue in page["issues"]] == ["ENG-3", "ENG-4"]
     assert page["pagination"] == {
         "page": 2,
@@ -39,7 +45,7 @@ def test_issue_search_page_paginates_and_sanitizes_field_ids():
         "has_next": True,
         "fetched": 5,
     }
-    assert page["issues"][0]["fields"]["Story Points"] == 3
+    assert "Story Points" not in page["issues"][0]["fields"]
     assert "customfield_" not in repr(page["issues"])
 
 

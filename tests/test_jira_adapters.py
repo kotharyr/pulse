@@ -29,6 +29,28 @@ class FakeJira:
         return self.request("GET", f"/rest/api/2/issue/{key}", params=params)
 
 
+class FakeResponse:
+    def __init__(self, status_code=200, payload=None, text=""):
+        self.status_code = status_code
+        self._payload = payload if payload is not None else {}
+        self.text = text
+        self.headers = {"content-type": "application/json"}
+        self.content = b"{}" if status_code < 400 else (text or "error").encode()
+
+    def json(self):
+        return self._payload
+
+
+class FakeHttp:
+    def __init__(self, responses):
+        self.responses = iter(responses)
+        self.calls = []
+
+    def request(self, method, path, **kwargs):
+        self.calls.append((method, path, kwargs))
+        return next(self.responses)
+
+
 def test_cloud_provider_uses_v3_token_pagination():
     jira = FakeJira([
         {"issues": [{"key": "A-1"}], "nextPageToken": "next"},
@@ -76,6 +98,36 @@ def test_datacenter_provider_uses_direct_issue_lookup_when_search_resource_is_un
     assert rows == [{"key": "WXCNP-78909", "fields": {"summary": "Target issue"}}]
     assert jira.calls[2][:2] == ("GET", "/rest/api/2/issue/WXCNP-78909")
     assert jira.calls[2][2]["params"] == {"fields": "summary"}
+
+
+def test_jira_client_request_uses_relative_paths_to_preserve_configured_context_path():
+    jira = object.__new__(JiraClient)
+    jira.name = "test"
+    jira.cfg = SimpleNamespace(instance_type="datacenter", base_url="https://jira.example.com/jira")
+    jira.http = FakeHttp([FakeResponse(payload={"ok": True})])
+
+    result = JiraClient.request(jira, "GET", "/rest/api/2/myself")
+
+    assert result == {"ok": True}
+    assert jira.http.calls == [("GET", "rest/api/2/myself", {})]
+
+
+def test_jira_client_retries_common_jira_context_path_for_datacenter_404():
+    jira = object.__new__(JiraClient)
+    jira.name = "test"
+    jira.cfg = SimpleNamespace(instance_type="datacenter", base_url="https://jira.example.com")
+    jira.http = FakeHttp([
+        FakeResponse(status_code=404, text="not found"),
+        FakeResponse(payload={"key": "WXCNP-78909"}),
+    ])
+
+    result = JiraClient.request(jira, "GET", "/rest/api/2/issue/WXCNP-78909")
+
+    assert result == {"key": "WXCNP-78909"}
+    assert [call[1] for call in jira.http.calls] == [
+        "rest/api/2/issue/WXCNP-78909",
+        "jira/rest/api/2/issue/WXCNP-78909",
+    ]
 
 
 def test_sprint_issues_requests_resolved_story_point_id():

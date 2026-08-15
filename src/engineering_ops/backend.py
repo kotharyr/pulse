@@ -217,15 +217,7 @@ class EngineeringOpsBackend:
         start = (page - 1) * page_size
         fetch_limit = min(start + page_size + 1, self.settings.max_search_results)
         jira = self.client(instance)
-        aliases: dict[str, str] = {}
         default_fields = ["summary", "status", "priority", "assignee", "created", "updated", "labels", "issuetype"]
-        try:
-            points_name, points_id = self._story_points_field(jira)
-            if points_id:
-                default_fields.append(points_id)
-                aliases[points_id] = points_name
-        except Exception as exc:
-            logger.debug("Could not resolve story point field for console search on %s: %s", instance, exc)
         rows = jira.search(jql, fields or default_fields, fetch_limit)
         page_rows = rows[start:start + page_size]
         has_next = len(rows) > start + page_size
@@ -240,7 +232,7 @@ class EngineeringOpsBackend:
                 "has_next": has_next,
                 "fetched": len(rows),
             },
-            "issues": [_sanitize_issue(row, aliases) for row in page_rows],
+            "issues": [_sanitize_issue(row) for row in page_rows],
         }
 
     def _build_field_update_preview(
