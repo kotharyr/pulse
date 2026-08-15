@@ -11,6 +11,7 @@ from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from engineering_ops.api import console_routes
 from engineering_ops.auth import StaticBearerTokenVerifier
 from engineering_ops.backend import backend
 from engineering_ops.config import settings, validate_startup_configuration
@@ -155,6 +156,10 @@ def build_plugin_registry() -> PluginRegistry:
     registry.add(CapabilityPlugin(
         name="repositories",
         tools=(list_local_repositories, scan_repository_packages),
+    ))
+    registry.add(CapabilityPlugin(
+        name="console",
+        routes=console_routes(),
     ))
     return registry
 

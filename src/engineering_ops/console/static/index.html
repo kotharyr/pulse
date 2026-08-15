@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Engineering Ops Console</title>
+    <link rel="stylesheet" href="/console/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Engineering Operations</p>
+          <h1>Ops Console</h1>
+        </div>
+        <div class="mode-pill" id="mode-pill">recommend_only</div>
+      </header>
+
+      <main class="workspace">
+        <section class="band controls-band" aria-labelledby="search-title">
+          <div class="section-title">
+            <h2 id="search-title">Issue Search</h2>
+            <div class="selector-row">
+              <label for="instance-select">Instance</label>
+              <select id="instance-select">
+                <option value="cloud">Cloud</option>
+                <option value="onprem">On-Prem</option>
+              </select>
+            </div>
+          </div>
+          <div class="search-grid">
+            <label class="field-block" for="jql-input">
+              <span>JQL</span>
+              <input id="jql-input" type="search" value="ORDER BY updated DESC">
+            </label>
+            <div class="button-row">
+              <button id="search-button" class="primary" type="button">Search</button>
+              <button id="save-view-button" type="button">Save View</button>
+            </div>
+          </div>
+          <div class="saved-views" id="saved-views"></div>
+        </section>
+
+        <section class="band table-band" aria-labelledby="issues-title">
+          <div class="section-title compact">
+            <h2 id="issues-title">Issues</h2>
+            <div class="pager">
+              <button id="prev-page" type="button" aria-label="Previous page">Prev</button>
+              <span id="page-label">Page 1</span>
+              <button id="next-page" type="button" aria-label="Next page">Next</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Summary</th>
+                  <th>Status</th>
+                  <th>Assignee</th>
+                  <th>Points</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody id="issues-body">
+                <tr><td colspan="6" class="empty">Run a search to load issues.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="band sprint-band" aria-labelledby="sprint-title">
+          <div class="section-title">
+            <h2 id="sprint-title">Current Sprint</h2>
+            <div class="sprint-inputs">
+              <label for="sprint-id">Sprint</label>
+              <input id="sprint-id" inputmode="numeric" placeholder="42">
+              <label for="next-sprint-id">Next</label>
+              <input id="next-sprint-id" inputmode="numeric" placeholder="43">
+              <button id="load-sprint" class="primary" type="button">Load</button>
+            </div>
+          </div>
+
+          <div class="metric-grid" id="metric-grid">
+            <article class="metric"><span>Completion</span><strong id="metric-completion">0%</strong></article>
+            <article class="metric"><span>Completed Points</span><strong id="metric-completed-points">0</strong></article>
+            <article class="metric"><span>Remaining Points</span><strong id="metric-remaining-points">0</strong></article>
+            <article class="metric"><span>Projected Load</span><strong id="metric-projected-load">0</strong></article>
+            <article class="metric"><span>Capacity</span><strong id="metric-capacity">Unknown</strong></article>
+            <article class="metric warning" id="overcommit-card"><span>Overcommit</span><strong id="metric-overcommit">0%</strong></article>
+          </div>
+
+          <div class="dashboard-grid">
+            <section class="panel">
+              <h3>Progress By Team</h3>
+              <div id="team-progress" class="bar-list"></div>
+            </section>
+            <section class="panel">
+              <h3>Progress By Engineer</h3>
+              <div id="engineer-progress" class="bar-list"></div>
+            </section>
+            <section class="panel">
+              <h3>Blocked Work</h3>
+              <div id="blocked-work" class="mini-list"></div>
+            </section>
+            <section class="panel">
+              <h3>Rollover Candidates</h3>
+              <div id="rollover-candidates" class="mini-list"></div>
+            </section>
+            <section class="panel">
+              <h3>Split Proposals</h3>
+              <div id="split-proposals" class="mini-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="band execution-band" aria-labelledby="execution-title">
+          <div class="section-title">
+            <h2 id="execution-title">Execution Preview</h2>
+            <div class="button-row">
+              <label class="checkline" for="rollover-all">
+                <input id="rollover-all" type="checkbox" checked>
+                <span>Roll incomplete</span>
+              </label>
+              <button id="preview-close" class="primary" type="button">Preview Close</button>
+            </div>
+          </div>
+          <div class="execution-grid">
+            <section class="panel preview-panel">
+              <div class="status-row">
+                <span class="state-badge preview">Preview</span>
+                <span id="preview-status">No preview selected</span>
+              </div>
+              <pre id="preview-output">{}</pre>
+              <div class="button-row end">
+                <button id="reject-preview" type="button" disabled>Reject</button>
+                <button id="apply-preview" class="danger" type="button" disabled>Apply</button>
+              </div>
+            </section>
+            <section class="panel">
+              <h3>Execution History</h3>
+              <div id="execution-history" class="history-list"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+    <script src="/console/app.js"></script>
+  </body>
+</html>

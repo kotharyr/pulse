@@ -14,8 +14,9 @@ from engineering_ops.config import Settings, configuration_report, settings
 from engineering_ops.runtime import client as default_client
 from engineering_ops.services.fields import resolve_field, resolve_value_for_issue
 from engineering_ops.services.health import engineering_health as health_summary
+from engineering_ops.services.executions import ExecutionHistory
 from engineering_ops.services.repos import discover_repositories, extract_security_signals, scan_manifests
-from engineering_ops.services.sprints import is_done, overcommit_analysis, story_points, summarize_capacity
+from engineering_ops.services.sprints import is_done, overcommit_analysis, sprint_intelligence, story_points, summarize_capacity
 
 logger = logging.getLogger("engineering_ops")
 ClientGetter = Callable[[str], JiraClient]
@@ -72,6 +73,7 @@ class EngineeringOpsBackend:
     client_getter: ClientGetter = default_client
     settings: Settings = field(default_factory=lambda: settings)
     configuration_reporter: Callable[[], dict[str, Any]] = configuration_report
+    execution_store: ExecutionHistory = field(default_factory=ExecutionHistory)
 
     def client(self, instance: str) -> JiraClient:
         return self.client_getter(instance)
@@ -79,6 +81,29 @@ class EngineeringOpsBackend:
     def _story_points_field(self, jira: JiraClient) -> tuple[str, str | None]:
         name = jira.cfg.story_points_field_name
         return name, resolve_field(jira, name)["id"]
+
+    def _recent_capacity_samples(
+        self,
+        jira: JiraClient,
+        board_id: int | None,
+        points_field_name: str,
+        points_field_id: str | None,
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        if not board_id:
+            return []
+        closed = jira.board_sprints(board_id, state="closed", limit=5)
+        samples = []
+        for sprint in closed[-limit:]:
+            issues = jira.sprint_issues(int(sprint["id"]), story_points_field_id=points_field_id)
+            completed = sum(story_points(issue, points_field_name, points_field_id) for issue in issues if is_done(issue))
+            if completed > 0:
+                samples.append({
+                    "sprint_id": sprint.get("id"),
+                    "name": sprint.get("name"),
+                    "completed_story_points": round(completed, 2),
+                })
+        return samples
 
     def _derive_capacity(
         self,
@@ -92,16 +117,11 @@ class EngineeringOpsBackend:
             return {"story_points": cfg.sprint_capacity_points, "issue_count": cfg.sprint_capacity_issue_count, "source": "configured"}
         if board_id:
             try:
-                closed = jira.board_sprints(board_id, state="closed", limit=5)
-                samples = []
-                for sprint in closed[-3:]:
-                    issues = jira.sprint_issues(int(sprint["id"]), story_points_field_id=points_field_id)
-                    completed = sum(story_points(issue, points_field_name, points_field_id) for issue in issues if is_done(issue))
-                    if completed > 0:
-                        samples.append(completed)
+                samples = self._recent_capacity_samples(jira, board_id, points_field_name, points_field_id)
                 if samples:
+                    completed_points = [sample["completed_story_points"] for sample in samples]
                     return {
-                        "story_points": round(mean(samples), 2),
+                        "story_points": round(mean(completed_points), 2),
                         "issue_count": None,
                         "source": f"average completed points from {len(samples)} recent closed sprints",
                     }
@@ -182,6 +202,46 @@ class EngineeringOpsBackend:
             min(limit, self.settings.max_search_results),
         )
         return {"count": len(rows), "issues": [_sanitize_issue(row) for row in rows]}
+
+    def search_issues_page(
+        self,
+        instance: str,
+        jql: str,
+        fields: list[str] | None = None,
+        page: int = 1,
+        page_size: int = 25,
+    ) -> dict[str, Any]:
+        """Return a sanitized issue page for the Ops Console."""
+        page = max(1, int(page))
+        page_size = max(1, min(int(page_size), 100))
+        start = (page - 1) * page_size
+        fetch_limit = min(start + page_size + 1, self.settings.max_search_results)
+        jira = self.client(instance)
+        aliases: dict[str, str] = {}
+        default_fields = ["summary", "status", "priority", "assignee", "created", "updated", "labels", "issuetype"]
+        try:
+            points_name, points_id = self._story_points_field(jira)
+            if points_id:
+                default_fields.append(points_id)
+                aliases[points_id] = points_name
+        except Exception as exc:
+            logger.debug("Could not resolve story point field for console search on %s: %s", instance, exc)
+        rows = jira.search(jql, fields or default_fields, fetch_limit)
+        page_rows = rows[start:start + page_size]
+        has_next = len(rows) > start + page_size
+        return {
+            "instance": instance,
+            "jql": jql,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "count": len(page_rows),
+                "has_previous": page > 1,
+                "has_next": has_next,
+                "fetched": len(rows),
+            },
+            "issues": [_sanitize_issue(row, aliases) for row in page_rows],
+        }
 
     def _build_field_update_preview(
         self,
@@ -327,6 +387,55 @@ class EngineeringOpsBackend:
             **capacity,
             "incomplete_issue_keys": [issue["key"] for issue in issues if not is_done(issue)],
             "issues": [_sanitize_issue(issue, aliases) for issue in issues],
+        }
+
+    def analyze_current_sprint(
+        self,
+        instance: str,
+        sprint_id: int,
+        next_sprint_id: int | None = None,
+    ) -> dict[str, Any]:
+        """Return current sprint intelligence for the Ops Console."""
+        jira = self.client(instance)
+        sprint = jira.sprint(sprint_id)
+        next_sprint = jira.sprint(next_sprint_id) if next_sprint_id else None
+        points_name, points_id = self._story_points_field(jira)
+        current_issues = jira.sprint_issues(sprint_id, story_points_field_id=points_id)
+        next_issues = jira.sprint_issues(next_sprint_id, story_points_field_id=points_id) if next_sprint_id else []
+        board_id = (
+            (next_sprint or {}).get("originBoardId")
+            or sprint.get("originBoardId")
+            or jira.cfg.default_board_id
+        )
+        normalized_board_id = int(board_id) if board_id else None
+        capacity = self._derive_capacity(jira, normalized_board_id, points_name, points_id)
+        baseline_samples: list[dict[str, Any]] = []
+        try:
+            baseline_samples = self._recent_capacity_samples(jira, normalized_board_id, points_name, points_id)
+        except Exception as exc:
+            logger.warning("Could not load recent sprint baseline for %s: %s", jira.name, exc)
+        aliases = {points_id: points_name} if points_id else {}
+        return {
+            "mode": self.settings.mode,
+            "instance": instance,
+            "sprint": sprint,
+            "next_sprint": next_sprint,
+            "recent_sprint_capacity_baseline": {
+                "samples": baseline_samples,
+                "average_completed_story_points": round(
+                    mean([sample["completed_story_points"] for sample in baseline_samples]),
+                    2,
+                ) if baseline_samples else None,
+            },
+            "analysis": sprint_intelligence(
+                current_issues,
+                next_issues,
+                points_name,
+                points_id,
+                capacity,
+                jira.cfg.sprint_capacity_buffer_percent,
+            ),
+            "issues": [_sanitize_issue(issue, aliases) for issue in current_issues],
         }
 
     def analyze_next_sprint_capacity(
@@ -515,6 +624,85 @@ class EngineeringOpsBackend:
             "next_sprint_capacity": preview["next_sprint_capacity"],
             "warnings": preview["warnings"],
         }
+
+    def create_execution_preview(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Create and store an execution preview for console approve/reject workflows."""
+        params = dict(parameters)
+        instance = params.get("instance")
+        if not instance:
+            raise ValueError("instance is required")
+        if action == "field_updates":
+            preview = self.preview_field_updates(
+                instance,
+                params["jql"],
+                params["updates"],
+                int(params.get("limit", 500)),
+            )
+        elif action == "assign_to_quarter":
+            preview = self.assign_to_quarter(
+                instance,
+                params["jql"],
+                params["quarter"],
+                dry_run=True,
+                limit=int(params.get("limit", 500)),
+            )
+        elif action == "close_sprint":
+            preview = self.preview_close_sprint(
+                instance,
+                int(params["sprint_id"]),
+                int(params["next_sprint_id"]),
+                params.get("move_issue_keys"),
+                params.get("split_plans"),
+                bool(params.get("rollover_all_incomplete", False)),
+            )
+        else:
+            raise ValueError(f"Unsupported execution action: {action}")
+        return self.execution_store.add_preview(action, instance, params, preview)
+
+    def apply_execution_preview(self, preview_id: str) -> dict[str, Any]:
+        """Apply a stored preview through the same backend write gates used by MCP."""
+        record = self.execution_store.get_record(preview_id).to_dict()
+        action = record["action"]
+        params = record["parameters"]
+        instance = record["instance"]
+        if action == "field_updates":
+            result = self.apply_field_updates(
+                instance,
+                params["jql"],
+                params["updates"],
+                int(params.get("limit", 500)),
+                preview_id=preview_id,
+            )
+        elif action == "assign_to_quarter":
+            result = self.assign_to_quarter(
+                instance,
+                params["jql"],
+                params["quarter"],
+                dry_run=False,
+                limit=int(params.get("limit", 500)),
+                preview_id=preview_id,
+            )
+        elif action == "close_sprint":
+            result = self.apply_close_sprint(
+                instance,
+                int(params["sprint_id"]),
+                int(params["next_sprint_id"]),
+                params.get("move_issue_keys"),
+                params.get("split_plans"),
+                bool(params.get("rollover_all_incomplete", False)),
+                preview_id=preview_id,
+            )
+        else:
+            raise ValueError(f"Unsupported execution action: {action}")
+        return self.execution_store.mark_applied(preview_id, result)
+
+    def reject_execution_preview(self, preview_id: str) -> dict[str, Any]:
+        """Reject a stored preview without writing to external systems."""
+        return self.execution_store.mark_rejected(preview_id)
+
+    def execution_history(self, limit: int = 50) -> dict[str, Any]:
+        """Return recent console execution previews and outcomes."""
+        return {"executions": self.execution_store.list(limit)}
 
     def list_local_repositories(self) -> dict:
         """List locally checked-out repositories under LOCAL_REPO_ROOT. Read-only."""

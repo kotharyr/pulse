@@ -94,6 +94,18 @@ MCP endpoint:
 http://127.0.0.1:8080/mcp
 ```
 
+Ops Console:
+
+```text
+http://127.0.0.1:8080/console
+```
+
+The console uses the same backend capability layer as MCP through `/api/...`
+routes. It provides instance selection, paginated issue search, browser-local
+saved views, current sprint intelligence, execution previews, approve/reject
+controls, and execution history. In `MODE=recommend_only`, apply attempts remain
+blocked and are recorded as failed without writing to Jira.
+
 ## Safety modes
 
 ### `recommend_only`

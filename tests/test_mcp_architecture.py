@@ -9,7 +9,7 @@ from engineering_ops.server import build_plugin_registry, create_mcp_server
 
 
 def test_builtin_capabilities_are_plugins():
-    assert build_plugin_registry().names == ["system", "jira", "repositories"]
+    assert build_plugin_registry().names == ["system", "jira", "repositories", "console"]
 
 
 def test_plugin_composition_preserves_tool_names():
