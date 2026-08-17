@@ -286,6 +286,18 @@ class JiraClient:
     def projects(self, limit: int = 200):
         return self.provider.projects(self, limit)
 
+    def issue_types(self):
+        return self.request("GET", f"/rest/api/{self.platform_api_version}/issuetype")
+
+    def priorities(self):
+        return self.request("GET", f"/rest/api/{self.platform_api_version}/priority")
+
+    def project_components(self, project_key: str):
+        return self.request("GET", f"/rest/api/{self.platform_api_version}/project/{project_key}/components")
+
+    def project_versions(self, project_key: str):
+        return self.request("GET", f"/rest/api/{self.platform_api_version}/project/{project_key}/versions")
+
     def search(self, jql: str, fields: list[str], limit: int = 500):
         if limit <= 0:
             return []

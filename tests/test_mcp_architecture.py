@@ -16,6 +16,21 @@ def test_plugin_composition_preserves_tool_names():
     server = create_mcp_server(validate_configuration=False)
     names = {tool.name for tool in asyncio.run(server.list_tools())}
     assert {"system_readiness", "search_issues", "scan_repository_packages"} <= names
+    assert {
+        "engineering_review",
+        "sprint_analysis",
+        "sprint_close_preview",
+        "sprint_close_apply",
+        "portfolio_review",
+        "backlog_review",
+        "security_remediation_analysis",
+        "saved_view_review",
+        "discover_environment",
+        "refresh_environment",
+        "get_environment_summary",
+        "search_saved_view",
+        "repository_inventory",
+    } <= names
 
 
 def test_mcp_tool_surface_preserves_public_apply_contracts():
@@ -27,16 +42,40 @@ def test_mcp_tool_surface_preserves_public_apply_contracts():
 
     assert (
         tools["apply_field_updates"].description
-        == "Apply a previously understood reversible field update. Blocked in recommend_only mode."
+        == "Low-level/advanced apply: apply a previously understood reversible field update. Blocked in recommend_only mode."
     )
     assert (
         tools["preview_close_sprint"].description
-        == "Preview sprint closure, rollover, issue splitting, and next-sprint overcommit. Never writes. split_plans may include source_issue_key, new_summary, new_description, story_points, new_issue_type, parent_key, and source_transition_status."
+        == "Low-level/advanced diagnostic: preview sprint closure with explicit sprint ids. Prefer sprint_close_preview for natural-language sprint close planning."
     )
     assert (
         tools["apply_close_sprint"].description
-        == "Execute an explicitly approved sprint-close plan. Requires MODE=approved_destructive. Creates follow-on issues, transitions split sources, moves rollover work, then closes the sprint."
+        == "Low-level/advanced apply: execute an explicitly approved sprint-close plan with explicit sprint ids. Prefer sprint_close_apply with a stored preview id."
     )
+    assert tools["search_issues"].description.startswith("Low-level/advanced diagnostic")
+    assert "Prepare a concise engineering operations review" in tools["engineering_review"].description
+
+
+def test_mcp_orchestration_wrappers_call_backend(monkeypatch):
+    class FakeBackend:
+        def __init__(self):
+            self.calls = []
+
+        def engineering_review(self, *args):
+            self.calls.append(("engineering_review", args))
+            return {"workflow": "engineering_review"}
+
+        def sprint_close_apply_workflow(self, preview_id):
+            self.calls.append(("sprint_close_apply", preview_id))
+            return {"workflow": "sprint_close_apply"}
+
+    fake = FakeBackend()
+    monkeypatch.setattr(server_module, "backend", fake)
+
+    assert server_module.engineering_review("cloud")["workflow"] == "engineering_review"
+    assert server_module.sprint_close_apply("preview-1")["workflow"] == "sprint_close_apply"
+    assert fake.calls[0][0] == "engineering_review"
+    assert fake.calls[1] == ("sprint_close_apply", "preview-1")
 
 
 def test_static_bearer_token_verifier():

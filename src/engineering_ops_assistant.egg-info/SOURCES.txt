@@ -5,6 +5,7 @@ src/engineering_ops/api.py
 src/engineering_ops/auth.py
 src/engineering_ops/backend.py
 src/engineering_ops/config.py
+src/engineering_ops/models.py
 src/engineering_ops/plugins.py
 src/engineering_ops/runtime.py
 src/engineering_ops/server.py
@@ -12,10 +13,13 @@ src/engineering_ops/adapters/jira.py
 src/engineering_ops/console/static/app.js
 src/engineering_ops/console/static/index.html
 src/engineering_ops/console/static/styles.css
+src/engineering_ops/services/environment.py
 src/engineering_ops/services/executions.py
 src/engineering_ops/services/fields.py
 src/engineering_ops/services/health.py
 src/engineering_ops/services/repos.py
+src/engineering_ops/services/saved_views.py
+src/engineering_ops/services/security.py
 src/engineering_ops/services/sprints.py
 src/engineering_ops_assistant.egg-info/PKG-INFO
 src/engineering_ops_assistant.egg-info/SOURCES.txt
@@ -26,6 +30,7 @@ tests/test_config.py
 tests/test_console_api.py
 tests/test_console_backend.py
 tests/test_credentials.py
+tests/test_environment_discovery.py
 tests/test_environment_loading.py
 tests/test_field_resolution.py
 tests/test_jira_adapters.py
@@ -33,5 +38,8 @@ tests/test_mcp_architecture.py
 tests/test_migration.py
 tests/test_platform_contracts.py
 tests/test_repo_scanning.py
+tests/test_repository_inventory.py
+tests/test_saved_views.py
+tests/test_security_remediation.py
 tests/test_sprint_capacity.py
 tests/test_sprint_intelligence.py

@@ -49,6 +49,82 @@ def test_issue_search_page_paginates_and_sanitizes_field_ids():
     assert "customfield_" not in repr(page["issues"])
 
 
+class FakeSprintDiscoveryJira:
+    name = "fake"
+
+    def __init__(self, active_name="Sprint 12", future=None):
+        self.cfg = SimpleNamespace(default_project="ENG", default_board_id=None)
+        self.active_name = active_name
+        self.future = future or [
+            {"id": 13, "name": "Sprint 13", "state": "future", "startDate": "2026-02-15T09:00:00.000Z"},
+            {"id": 20, "name": "Sprint 20", "state": "future", "startDate": "2026-03-01T09:00:00.000Z"},
+        ]
+
+    def boards(self, project, limit):
+        return [{"id": 7, "name": f"{project} Board"}]
+
+    def board_sprints(self, board_id, state=None, limit=100):
+        if state == "active":
+            return [{
+                "id": 12,
+                "name": self.active_name,
+                "state": "active",
+                "originBoardId": board_id,
+                "endDate": "2026-02-14T17:00:00.000Z",
+            }]
+        if state == "future":
+            return self.future
+        return []
+
+
+def test_console_sprint_discovery_selects_next_sprint_by_number():
+    jira = FakeSprintDiscoveryJira()
+    backend = EngineeringOpsBackend(client_getter=lambda instance: jira)
+
+    discovered = backend.discover_console_sprints("fake")
+
+    assert discovered["current_sprint"]["id"] == 12
+    assert discovered["next_sprint"]["id"] == 13
+    assert discovered["selection"]["next_strategy"] == "number"
+
+
+def test_console_sprint_discovery_falls_back_to_dates():
+    future = [
+        {"id": 31, "name": "Planning Alpha", "state": "future", "startDate": "2026-03-01T09:00:00.000Z"},
+        {"id": 30, "name": "Planning Beta", "state": "future", "startDate": "2026-02-15T09:00:00.000Z"},
+    ]
+    jira = FakeSprintDiscoveryJira(active_name="Current Cycle", future=future)
+    backend = EngineeringOpsBackend(client_getter=lambda instance: jira)
+
+    discovered = backend.discover_console_sprints("fake")
+
+    assert discovered["next_sprint"]["id"] == 30
+    assert discovered["selection"]["next_strategy"] == "date"
+
+
+def test_console_sprint_discovery_continues_after_board_errors():
+    class FakeMixedBoardJira(FakeSprintDiscoveryJira):
+        def boards(self, project, limit):
+            return [{"id": 1, "name": "Kanban"}, {"id": 7, "name": "Scrum"}]
+
+        def board_sprints(self, board_id, state=None, limit=100):
+            if board_id == 1:
+                raise RuntimeError("sprints unavailable")
+            return super().board_sprints(board_id, state, limit)
+
+    jira = FakeMixedBoardJira()
+    backend = EngineeringOpsBackend(client_getter=lambda instance: jira)
+
+    discovered = backend.discover_console_sprints("fake")
+
+    assert discovered["current_sprint"]["id"] == 12
+    assert discovered["next_sprint"]["id"] == 13
+    assert discovered["errors"] == [
+        {"board_id": 1, "board_name": "Kanban", "state": "active", "error": "sprints unavailable"},
+        {"board_id": 1, "board_name": "Kanban", "state": "future", "error": "sprints unavailable"},
+    ]
+
+
 class FakeWriteJira:
     name = "fake"
     cfg = SimpleNamespace(default_project="ENG", quarter_field_name="Target Quarter", story_points_field_name="Story Points")

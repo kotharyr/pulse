@@ -5,6 +5,7 @@ import logging
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from hashlib import sha256
 from statistics import mean
 from typing import Any, Callable
@@ -12,15 +13,67 @@ from typing import Any, Callable
 from engineering_ops.adapters.jira import JiraClient
 from engineering_ops.config import Settings, configuration_report, settings
 from engineering_ops.runtime import client as default_client
+from engineering_ops.services.environment import (
+    EnvironmentCache,
+    discover_environment_model,
+    find_by_name,
+    public_environment,
+    with_cache_age,
+)
 from engineering_ops.services.fields import resolve_field, resolve_value_for_issue
 from engineering_ops.services.health import engineering_health as health_summary
 from engineering_ops.services.executions import ExecutionHistory
-from engineering_ops.services.repos import discover_repositories, extract_security_signals, scan_manifests
+from engineering_ops.services.orchestration import EngineeringOrchestrator
+from engineering_ops.services.repos import discover_repositories, inventory_repositories, scan_manifests
+from engineering_ops.services.saved_views import SavedViewStore
+from engineering_ops.services.security import finding_from_issue, normalize_remediation_actions
 from engineering_ops.services.sprints import is_done, overcommit_analysis, sprint_intelligence, story_points, summarize_capacity
 
 logger = logging.getLogger("engineering_ops")
 ClientGetter = Callable[[str], JiraClient]
 CUSTOM_FIELD_RE = re.compile(r"^customfield_\d+$", re.I)
+SPRINT_NUMBER_RE = re.compile(r"(\d+)")
+
+
+def _parse_jira_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    elif re.search(r"[+-]\d{4}$", text):
+        text = f"{text[:-2]}:{text[-2:]}"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _sprint_sequence_number(sprint: dict[str, Any]) -> int | None:
+    matches = SPRINT_NUMBER_RE.findall(str(sprint.get("name") or ""))
+    if not matches:
+        return None
+    return int(matches[-1])
+
+
+def _sprint_sort_key(sprint: dict[str, Any]) -> tuple[Any, ...]:
+    start = _parse_jira_datetime(sprint.get("startDate"))
+    end = _parse_jira_datetime(sprint.get("endDate"))
+    number = _sprint_sequence_number(sprint)
+    return (
+        start is None,
+        start or datetime.max.replace(tzinfo=timezone.utc),
+        end is None,
+        end or datetime.max.replace(tzinfo=timezone.utc),
+        number is None,
+        number or 0,
+        int(sprint.get("id") or 0),
+    )
 
 
 def _text_from_adf(node: Any) -> str:
@@ -74,9 +127,14 @@ class EngineeringOpsBackend:
     settings: Settings = field(default_factory=lambda: settings)
     configuration_reporter: Callable[[], dict[str, Any]] = configuration_report
     execution_store: ExecutionHistory = field(default_factory=ExecutionHistory)
+    environment_cache: EnvironmentCache = field(default_factory=EnvironmentCache)
+    saved_view_store: SavedViewStore = field(default_factory=SavedViewStore)
 
     def client(self, instance: str) -> JiraClient:
         return self.client_getter(instance)
+
+    def orchestrator(self) -> EngineeringOrchestrator:
+        return EngineeringOrchestrator(self)
 
     def _story_points_field(self, jira: JiraClient) -> tuple[str, str | None]:
         name = jira.cfg.story_points_field_name
@@ -193,6 +251,242 @@ class EngineeringOpsBackend:
             "boards": boards,
             "sprints": sprint_rows,
         }
+
+    def discover_console_sprints(self, instance: str, project_key: str | None = None) -> dict[str, Any]:
+        """Select the active sprint and likely next sprint for the Ops Console."""
+        jira = self.client(instance)
+        project = project_key or jira.cfg.default_project
+        configured_board_id = getattr(jira.cfg, "default_board_id", None)
+        if configured_board_id:
+            boards = [{"id": configured_board_id, "name": f"Board {configured_board_id}"}]
+            try:
+                discovered_boards = jira.boards(project, limit=100)
+                for board in discovered_boards:
+                    if int(board.get("id") or 0) == int(configured_board_id):
+                        boards = [board]
+                        break
+            except Exception as exc:
+                logger.warning("Could not list boards for sprint discovery on %s: %s", jira.name, exc)
+        else:
+            boards = jira.boards(project, limit=100)
+
+        sprint_rows: list[dict[str, Any]] = []
+        errors: list[dict[str, Any]] = []
+        for board in boards[:20]:
+            board_id = int(board["id"])
+            for state in ("active", "future"):
+                try:
+                    sprints = jira.board_sprints(board_id, state=state, limit=50)
+                except Exception as exc:
+                    errors.append({
+                        "board_id": board_id,
+                        "board_name": board.get("name"),
+                        "state": state,
+                        "error": str(exc),
+                    })
+                    continue
+                for sprint in sprints:
+                    sprint_rows.append({
+                        **sprint,
+                        "boardId": board_id,
+                        "boardName": board.get("name"),
+                        "sequenceNumber": _sprint_sequence_number(sprint),
+                    })
+
+        active_sprints = sorted(
+            [row for row in sprint_rows if str(row.get("state", "")).casefold() == "active"],
+            key=_sprint_sort_key,
+        )
+        future_sprints = sorted(
+            [row for row in sprint_rows if str(row.get("state", "")).casefold() == "future"],
+            key=_sprint_sort_key,
+        )
+        current_sprint = active_sprints[0] if active_sprints else None
+        next_sprint = None
+        selection_reason = "none"
+
+        if current_sprint and future_sprints:
+            same_board = [row for row in future_sprints if row.get("boardId") == current_sprint.get("boardId")]
+            candidates = same_board or future_sprints
+            current_number = current_sprint.get("sequenceNumber")
+            if current_number is not None:
+                numbered = [
+                    (row["sequenceNumber"] - current_number, _sprint_sort_key(row), row)
+                    for row in candidates
+                    if row.get("sequenceNumber") is not None and row["sequenceNumber"] > current_number
+                ]
+                if numbered:
+                    next_sprint = sorted(numbered, key=lambda item: (item[0], item[1]))[0][2]
+                    selection_reason = "number"
+            if next_sprint is None:
+                current_end = _parse_jira_datetime(current_sprint.get("endDate"))
+                dated = [
+                    row for row in candidates
+                    if _parse_jira_datetime(row.get("startDate"))
+                    and (current_end is None or _parse_jira_datetime(row.get("startDate")) >= current_end)
+                ]
+                if dated:
+                    next_sprint = sorted(dated, key=_sprint_sort_key)[0]
+                    selection_reason = "date"
+            if next_sprint is None and candidates:
+                next_sprint = sorted(candidates, key=_sprint_sort_key)[0]
+                selection_reason = "order"
+
+        return {
+            "instance": instance,
+            "project": project,
+            "boards": [{"id": board.get("id"), "name": board.get("name")} for board in boards[:20]],
+            "current_sprint": current_sprint,
+            "next_sprint": next_sprint,
+            "selection": {
+                "current_strategy": "active",
+                "next_strategy": selection_reason,
+                "active_count": len(active_sprints),
+                "future_count": len(future_sprints),
+            },
+            "errors": errors,
+        }
+
+    def _environment_model(self, instance: str, project_key: str | None = None, refresh: bool = False) -> dict[str, Any]:
+        cached = self.environment_cache.get(instance)
+        if cached and not refresh and (not project_key or cached.get("project") == project_key):
+            return with_cache_age(cached)
+        model = discover_environment_model(self.client(instance), instance, project_key)
+        return self.environment_cache.put(instance, model)
+
+    def discover_environment(
+        self,
+        instance: str,
+        project_key: str | None = None,
+        include_internal_ids: bool = False,
+    ) -> dict[str, Any]:
+        """Return cached Jira environment knowledge, refreshing when no cache exists."""
+        model = self._environment_model(instance, project_key, refresh=False)
+        return public_environment(model, include_internal_ids)
+
+    def refresh_environment(
+        self,
+        instance: str,
+        project_key: str | None = None,
+        include_internal_ids: bool = False,
+    ) -> dict[str, Any]:
+        """Refresh cached Jira environment knowledge. Read-only."""
+        model = self._environment_model(instance, project_key, refresh=True)
+        return public_environment(model, include_internal_ids)
+
+    def get_environment_summary(self, instance: str | None = None) -> dict[str, Any]:
+        """Summarize cached Jira environment discovery, including cache age and failures."""
+        names = [instance] if instance else list(self.settings.jira_instances())
+        rows = []
+        for name in names:
+            model = self.environment_cache.get(name)
+            if not model:
+                rows.append({"instance": name, "cached": False})
+                continue
+            current = with_cache_age(model)
+            rows.append({
+                "instance": name,
+                "cached": True,
+                "project": current.get("project"),
+                "last_refresh": current.get("refreshed_at"),
+                "cache_age_seconds": current.get("cache_age_seconds"),
+                "project_count": len(current.get("projects", [])),
+                "board_count": len(current.get("boards", [])),
+                "sprint_count": len(current.get("sprints", [])),
+                "field_count": len(current.get("fields", [])),
+                "custom_field_count": len(current.get("custom_fields", [])),
+                "errors": current.get("errors", []),
+            })
+        return {"instances": rows}
+
+    def find_project_by_name(self, instance: str, name: str) -> dict[str, Any]:
+        """Find a Jira project by human-readable project name or key."""
+        model = self._environment_model(instance)
+        row = find_by_name(model.get("projects", []), name)
+        return {"instance": instance, "query": name, "project": row and public_environment({"projects": [row]}, False)["projects"][0]}
+
+    def find_board_by_name(self, instance: str, name: str) -> dict[str, Any]:
+        """Find a Jira board by human-readable board name."""
+        model = self._environment_model(instance)
+        row = find_by_name(model.get("boards", []), name)
+        return {"instance": instance, "query": name, "board": row and public_environment({"boards": [row]}, False)["boards"][0]}
+
+    def find_sprint_by_name(self, instance: str, name: str) -> dict[str, Any]:
+        """Find a Jira sprint by human-readable sprint name."""
+        model = self._environment_model(instance)
+        row = find_by_name(model.get("sprints", []), name)
+        return {"instance": instance, "query": name, "sprint": row and public_environment({"sprints": [row]}, False)["sprints"][0]}
+
+    def resolve_field_name(self, instance: str, field_name: str, include_internal_ids: bool = False) -> dict[str, Any]:
+        """Resolve a human-readable Jira field name from cached discovery."""
+        model = self._environment_model(instance)
+        row = find_by_name(model.get("fields", []), field_name)
+        field = public_environment({"fields": [row]}, include_internal_ids)["fields"][0] if row else None
+        return {"instance": instance, "query": field_name, "field": field}
+
+    def resolve_field_value(
+        self,
+        instance: str,
+        field_name: str,
+        display_value: str | None = None,
+    ) -> dict[str, Any]:
+        """Resolve or list cached displayed values for a human-readable Jira select field."""
+        model = self._environment_model(instance)
+        values_by_field = model.get("select_field_values", {})
+        matched_name = None
+        for name in values_by_field:
+            if name.casefold() == field_name.casefold():
+                matched_name = name
+                break
+        if matched_name is None:
+            for name in values_by_field:
+                if field_name.casefold() in name.casefold():
+                    matched_name = name
+                    break
+        values = values_by_field.get(matched_name or field_name, [])
+        match = None
+        if display_value is not None:
+            for value in values:
+                if str(value).casefold() == display_value.casefold():
+                    match = value
+                    break
+        return {
+            "instance": instance,
+            "field": matched_name or field_name,
+            "values": values,
+            "query": display_value,
+            "match": match,
+        }
+
+    def _saved_view_defaults_context(self) -> tuple[str, str | None]:
+        instances = self.settings.jira_instances()
+        if not instances:
+            return "cloud", None
+        name, cfg = next(iter(instances.items()))
+        return name, cfg.default_project
+
+    def list_saved_views(self) -> dict[str, Any]:
+        """List local saved operational views. Does not write to Jira."""
+        instance, project = self._saved_view_defaults_context()
+        return {"views": self.saved_view_store.bootstrap_defaults(instance, project)}
+
+    def get_saved_view(self, name: str) -> dict[str, Any]:
+        """Get a local saved operational view by name."""
+        self.list_saved_views()
+        return {"view": self.saved_view_store.get(name)}
+
+    def save_operational_view(self, view: dict[str, Any]) -> dict[str, Any]:
+        """Create or update a local saved operational view. Does not write to Jira."""
+        return {"view": self.saved_view_store.upsert(view)}
+
+    def delete_operational_view(self, name: str) -> dict[str, Any]:
+        """Delete a local saved operational view. Does not write to Jira."""
+        return self.saved_view_store.delete(name)
+
+    def search_saved_view(self, name: str, page: int = 1, page_size: int = 25) -> dict[str, Any]:
+        """Run a local saved operational view by name."""
+        view = self.get_saved_view(name)["view"]
+        return {"view": view, "results": self.search_issues_page(view["instance"], view["jql"], page=page, page_size=page_size)}
 
     def search_issues(self, instance: str, jql: str, fields: list[str] | None = None, limit: int = 100) -> dict:
         """Search Jira using JQL. This tool is read-only and safe for exploratory natural-language questions."""
@@ -711,6 +1005,21 @@ class EngineeringOpsBackend:
         rows = scan_manifests(root)
         return {"configured": True, "root": str(root), "count": len(rows), "packages": rows}
 
+    def repository_inventory(self) -> dict[str, Any]:
+        """Inventory local repositories, manifests, package versions, images, and ownership hints. Read-only."""
+        root = self.settings.local_repo_path
+        if not root:
+            return {"configured": False, "repositories": [], "error": "LOCAL_REPO_ROOT is not configured"}
+        rows = inventory_repositories(root)
+        return {
+            "configured": True,
+            "root": str(root),
+            "count": len(rows),
+            "repositories": rows,
+            "package_count": sum(len(row.get("packages", [])) for row in rows),
+            "container_image_count": sum(len(row.get("container_images", [])) for row in rows),
+        }
+
     def analyze_security_package_updates(self, instance: str, project_key: str | None = None, limit: int = 2000) -> dict:
         """Normalize Operational Security Issue tickets into package remediation candidates and compare them with local repositories."""
         jira = self.client(instance)
@@ -727,41 +1036,35 @@ class EngineeringOpsBackend:
             min(limit, self.settings.max_search_results),
         )
         ticket_rows = []
-        aggregate: dict[tuple[str, str], dict[str, Any]] = {}
         for issue in issues:
             fields = issue.get("fields") or {}
             text = (fields.get("summary") or "") + "\n" + _text_from_adf(fields.get("description"))
-            signals = extract_security_signals(text)
-            ticket_rows.append({"issue_key": issue["key"], "summary": fields.get("summary"), **signals})
-            for fix in signals["fixed_versions"]:
-                package = fix.get("package")
-                version = fix.get("required_version")
-                if package and version:
-                    key = (package, version)
-                    row = aggregate.setdefault(key, {"package": package, "required_version": version, "issue_keys": [], "cves": set()})
-                    row["issue_keys"].append(issue["key"])
-                    row["cves"].update(signals["cves"])
-        repo_rows = scan_manifests(self.settings.local_repo_path) if self.settings.local_repo_path else []
-        repo_by_package = defaultdict(list)
-        for row in repo_rows:
-            if row.get("package"):
-                repo_by_package[str(row["package"]).casefold()].append(row)
-        normalized = []
-        for row in aggregate.values():
-            normalized.append({
-                "package": row["package"],
-                "required_version": row["required_version"],
-                "ticket_count": len(set(row["issue_keys"])),
-                "issue_keys": sorted(set(row["issue_keys"])),
-                "cves": sorted(row["cves"]),
-                "repo_occurrences": repo_by_package.get(row["package"].casefold(), []),
-            })
-        normalized.sort(key=lambda row: (-row["ticket_count"], row["package"]))
+            ticket_rows.append(finding_from_issue(issue, text))
+        repo_inventory = inventory_repositories(self.settings.local_repo_path) if self.settings.local_repo_path else []
+        remediation_actions = normalize_remediation_actions(ticket_rows, repo_inventory)
+        normalized = [
+            {
+                "package": row["component"],
+                "required_version": row.get("required_version"),
+                "ticket_count": row["tickets_potentially_cleared"],
+                "issue_keys": row["affected_jira_issues"],
+                "cves": row["cves"],
+                "repo_occurrences": [
+                    occurrence
+                    for repo in repo_inventory
+                    for occurrence in [*repo.get("packages", []), *repo.get("container_images", [])]
+                    if str(occurrence.get("package") or "").casefold() == row["component"]
+                ],
+            }
+            for row in remediation_actions
+        ]
         return {
             "matched_tickets": len(issues),
             "normalized_upgrade_actions": normalized,
+            "remediation_actions": remediation_actions,
             "raw_ticket_analysis": ticket_rows,
             "repo_scan_available": bool(self.settings.local_repo_path),
+            "repository_inventory": repo_inventory,
         }
 
     def engineering_health(self, instance: str, jql: str, stale_days: int = 90, limit: int = 5000) -> dict:
@@ -772,6 +1075,143 @@ class EngineeringOpsBackend:
             min(limit, self.settings.max_search_results),
         )
         return {"instance": instance, "jql": jql, **health_summary(issues, stale_days)}
+
+    def engineering_review(
+        self,
+        instance: str | None = None,
+        instances: list[str] | str | None = None,
+        team: str | None = None,
+        project: str | None = None,
+        saved_view: str | None = None,
+        time_window: str | None = "-30d",
+        include_sections: list[str] | str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """Prepare a high-level engineering operations review. Read-only orchestration."""
+        return self.orchestrator().engineering_review(
+            instance,
+            instances=instances,
+            team=team,
+            project=project,
+            saved_view=saved_view,
+            time_window=time_window,
+            include_sections=include_sections,
+            limit=limit,
+        )
+
+    def sprint_analysis(
+        self,
+        instance: str | None = None,
+        team: str | None = None,
+        project: str | None = None,
+        board: str | None = None,
+        sprint_name: str | None = None,
+        sprint_id: int | None = None,
+        next_sprint_name: str | None = None,
+        next_sprint_id: int | None = None,
+    ) -> dict[str, Any]:
+        """Analyze the current, named, or diagnostic sprint. Read-only orchestration."""
+        return self.orchestrator().sprint_analysis(
+            instance,
+            team=team,
+            project=project,
+            board=board,
+            sprint_name=sprint_name,
+            sprint_id=sprint_id,
+            next_sprint_name=next_sprint_name,
+            next_sprint_id=next_sprint_id,
+        )
+
+    def sprint_close_preview_workflow(
+        self,
+        instance: str | None = None,
+        project: str | None = None,
+        sprint_name: str | None = None,
+        sprint_id: int | None = None,
+        next_sprint_name: str | None = None,
+        next_sprint_id: int | None = None,
+        move_issue_keys: list[str] | None = None,
+        split_plans: list[dict[str, Any]] | None = None,
+        rollover_all_incomplete: bool = True,
+    ) -> dict[str, Any]:
+        """Create a stored sprint close preview without applying changes."""
+        return self.orchestrator().sprint_close_preview(
+            instance,
+            project=project,
+            sprint_name=sprint_name,
+            sprint_id=sprint_id,
+            next_sprint_name=next_sprint_name,
+            next_sprint_id=next_sprint_id,
+            move_issue_keys=move_issue_keys,
+            split_plans=split_plans,
+            rollover_all_incomplete=rollover_all_incomplete,
+        )
+
+    def sprint_close_apply_workflow(self, preview_id: str) -> dict[str, Any]:
+        """Apply a previously reviewed sprint close execution preview."""
+        return self.orchestrator().sprint_close_apply(preview_id)
+
+    def portfolio_review(
+        self,
+        instance: str | None = None,
+        project: str | None = None,
+        team: str | None = None,
+        quarter: str | None = None,
+        time_window: str | None = None,
+        limit: int = 500,
+    ) -> dict[str, Any]:
+        """Review quarter and portfolio commitments. Read-only orchestration."""
+        return self.orchestrator().portfolio_review(
+            instance,
+            project=project,
+            team=team,
+            quarter=quarter,
+            time_window=time_window,
+            limit=limit,
+        )
+
+    def backlog_review(
+        self,
+        instance: str | None = None,
+        project: str | None = None,
+        team: str | None = None,
+        time_window: str | None = "-90d",
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """Review backlog quality and disposition. Read-only orchestration."""
+        return self.orchestrator().backlog_review(
+            instance,
+            project=project,
+            team=team,
+            time_window=time_window,
+            limit=limit,
+        )
+
+    def security_remediation_analysis(
+        self,
+        instance: str | None = None,
+        project: str | None = None,
+        limit: int = 2000,
+    ) -> dict[str, Any]:
+        """Rank Operational Security Issue remediation opportunities. Read-only orchestration."""
+        return self.orchestrator().security_remediation_analysis(instance, project=project, limit=limit)
+
+    def saved_view_review(
+        self,
+        view_name: str,
+        instance: str | None = None,
+        page: int = 1,
+        page_size: int = 25,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        """Run and summarize a named saved operational view. Read-only orchestration."""
+        return self.orchestrator().saved_view_review(
+            view_name,
+            instance=instance,
+            page=page,
+            page_size=page_size,
+            limit=limit,
+        )
 
 
 backend = EngineeringOpsBackend()
