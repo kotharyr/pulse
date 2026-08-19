@@ -43,6 +43,9 @@ should call connector methods rather than constructing Jira REST paths or auth.
 - `health.py`: stale, blocked, unassigned, and domain-label summaries.
 - `repos.py`: local repository discovery, manifest scanning, and security signal
   extraction.
+- `portfolio_hygiene.py`: on-prem Portfolio Hygiene rules for Initiative
+  ancestry, fiscal-quarter date validation, QP commitment labels, preview
+  generation, source revalidation, and safe date/label apply.
 
 Prefer adding pure logic here, then orchestrating it from `EngineeringOpsBackend`.
 
@@ -54,6 +57,15 @@ pagination rules, sprint math, preview gates, or connector logic. Saved views ar
 browser-local for now. Future Action Register work should add a business service
 for action ordering/due dates, expose it through `EngineeringOpsBackend`, and then
 bind it to REST/UI routes.
+
+## Portfolio Hygiene
+
+Portfolio Hygiene belongs in `engineering_ops.services.portfolio_hygiene` and is
+exposed through `EngineeringOpsBackend.portfolio_hygiene_*`. MCP tools
+`portfolio_hygiene_review`, `portfolio_hygiene_preview_fix`, and
+`portfolio_hygiene_apply` plus REST endpoints under `/api/hygiene/...` must stay
+thin wrappers. Keep hierarchy/date/label logic out of `server.py`, `api.py`, and
+`console/static/app.js`.
 
 ## Platform Rules
 

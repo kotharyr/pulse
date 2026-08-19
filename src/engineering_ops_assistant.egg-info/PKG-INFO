@@ -37,6 +37,9 @@ A natural-language Engineering Operations backend for ChatGPT Enterprise using M
 - Local multi-repository discovery and dependency/container manifest scanning.
 - Security-ticket normalization for summaries containing `Operational Security Issue`.
 - Comparison of normalized package remediation targets with package versions found across local repositories.
+- On-prem Portfolio Hygiene review for Initiative ancestry, current-quarter
+  Portfolio Feature/Epic dates, and User Story QP commitment labels with
+  preview-first safe fixes.
 
 The server is deliberately safe by default. `MODE=recommend_only` allows analysis and previews but blocks writes.
 
@@ -70,6 +73,41 @@ JIRA_ONPREM_PAT=...
 The platform automatically uses Jira Cloud email + API token with HTTP Basic authentication and Jira Data Center PATs as Bearer tokens. If `JIRA_ONPREM_PAT` is absent, Data Center can fall back to `JIRA_ONPREM_USERNAME` + `JIRA_ONPREM_PASSWORD`.
 
 Field IDs, select option IDs, platform REST API versions, and authentication header construction remain internal implementation details.
+
+Fiscal quarters are explicit configuration. Pulse never assumes calendar quarters:
+
+```dotenv
+FISCAL_CALENDAR={"FY27Q1":{"start":"2026-08-01","end":"2026-10-31"}}
+```
+
+If a quarter is not present in `FISCAL_CALENDAR`, Pulse derives the current
+fiscal quarter from the configured fiscal-year start. The default is August 1,
+so August 19, 2026 resolves to `FY27Q1`.
+
+```dotenv
+FISCAL_YEAR_START_MONTH=8
+FISCAL_YEAR_START_DAY=1
+PORTFOLIO_TEAM_OPTIONS=Platform Excellence
+PORTFOLIO_PT_OPTIONS=Muon,Atlas,Phoenix,Dragon
+```
+
+Portfolio Hygiene resolves the configured Jira field names dynamically:
+
+```json
+{
+  "quarter_field_name": "Target Quarter",
+  "team_field_name": "Team",
+  "pt_field_name": "PT",
+  "team_pt_field_name": "Team/PT",
+  "start_date_field_name": "Start date",
+  "end_date_field_name": "End date",
+  "hierarchy_field_names": ["Parent Link", "Epic Link"]
+}
+```
+
+Team/PT scoping uses the configured `Team/PT` Jira field. In the console, Team is
+the grouping selector and PT is the Jira option (`Muon`, `Atlas`, `Phoenix`, or
+`Dragon`). It does not map Team to Components.
 
 ## Upgrade from v0.4
 
@@ -119,8 +157,9 @@ http://127.0.0.1:8080/console
 The console uses the same backend capability layer as MCP through `/api/...`
 routes. It provides instance selection, paginated issue search, browser-local
 saved views, current sprint intelligence, execution previews, approve/reject
-controls, and execution history. In `MODE=recommend_only`, apply attempts remain
-blocked and are recorded as failed without writing to Jira.
+controls, Portfolio Hygiene review/fix previews, and execution history. In
+`MODE=recommend_only`, apply attempts remain blocked and are recorded as failed
+without writing to Jira.
 
 ## Safety modes
 
@@ -131,6 +170,8 @@ Read, report, discover, scan repos, analyze security issues, calculate capacity,
 ### `safe_apply`
 
 Allows reversible Jira field updates such as Target Quarter assignments. Sprint closure and issue movement remain blocked.
+Portfolio Hygiene date and label fixes also require `safe_apply`; source issue
+state is revalidated before writing.
 
 ### `approved_destructive`
 
@@ -140,6 +181,11 @@ Always run `preview_field_updates` or `preview_close_sprint` immediately before
 the corresponding apply tool. The shared backend tracks a preview digest so
 non-MCP clients can enforce the same reviewed-plan check without changing MCP
 tool signatures.
+
+Portfolio Hygiene uses stored previews through `portfolio_hygiene_preview_fix`
+and `portfolio_hygiene_apply`. Parent repairs are never applied by default; they
+remain manual review unless a future destructive workflow can resolve exactly
+one valid parent with high confidence.
 
 ## MCP authentication
 

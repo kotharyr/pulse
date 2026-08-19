@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import anyio
 from starlette.requests import Request
@@ -15,6 +16,17 @@ STATIC_DIR = Path(__file__).resolve().parent / "console" / "static"
 
 def _error(message: str, status_code: int = 400) -> JSONResponse:
     return JSONResponse({"error": message}, status_code=status_code)
+
+
+def _correlation_id(request: Request) -> str:
+    return request.headers.get("x-correlation-id") or uuid4().hex
+
+
+def _json(request: Request, payload: dict[str, Any], status_code: int = 200) -> JSONResponse:
+    correlation_id = _correlation_id(request)
+    response = JSONResponse({**payload, "correlation_id": correlation_id}, status_code=status_code)
+    response.headers["x-correlation-id"] = correlation_id
+    return response
 
 
 def _int_query(request: Request, name: str, default: int | None = None) -> int | None:
@@ -233,6 +245,32 @@ async def api_execution_history(request: Request) -> JSONResponse:
     return JSONResponse(result)
 
 
+async def api_platform_configuration(request: Request) -> JSONResponse:
+    result = await anyio.to_thread.run_sync(backend.platform_configuration)
+    return _json(request, result)
+
+
+async def api_platform_connectors(request: Request) -> JSONResponse:
+    result = await anyio.to_thread.run_sync(backend.connector_status)
+    return _json(request, result)
+
+
+async def api_platform_audit(request: Request) -> JSONResponse:
+    limit = _int_query(request, "limit", 100) or 100
+    result = await anyio.to_thread.run_sync(lambda: backend.audit_events(limit))
+    return _json(request, result)
+
+
+async def api_platform_metrics(request: Request) -> JSONResponse:
+    result = await anyio.to_thread.run_sync(backend.system_metrics)
+    return _json(request, result)
+
+
+async def api_platform_diagnostics(request: Request) -> JSONResponse:
+    result = await anyio.to_thread.run_sync(backend.platform_diagnostics)
+    return _json(request, result)
+
+
 async def api_orchestration_engineering_review(request: Request) -> JSONResponse:
     payload = await _payload(request)
     try:
@@ -315,6 +353,125 @@ async def api_orchestration_saved_view_review(request: Request) -> JSONResponse:
         return _error(str(exc))
 
 
+def _hygiene_query_payload(request: Request) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "instance": request.query_params.get("instance") or "onprem",
+        "quarter": request.query_params.get("quarter"),
+        "project": request.query_params.get("project"),
+        "team": request.query_params.get("team"),
+        "pt": request.query_params.get("pt"),
+        "saved_view": request.query_params.get("saved_view"),
+        "limit": _int_query(request, "limit", 500) or 500,
+    }
+    return {key: value for key, value in payload.items() if value not in (None, "")}
+
+
+async def api_hygiene_context(request: Request) -> JSONResponse:
+    instance = request.query_params.get("instance") or "onprem"
+    quarter = request.query_params.get("quarter")
+    try:
+        result = await anyio.to_thread.run_sync(lambda: backend.portfolio_hygiene_context(instance, quarter))
+        return JSONResponse(result)
+    except Exception as exc:
+        return _error(str(exc))
+
+
+async def api_hygiene_review_get(request: Request) -> JSONResponse:
+    try:
+        payload = _hygiene_query_payload(request)
+        result = await anyio.to_thread.run_sync(lambda: backend.portfolio_hygiene_review(**payload))
+        return JSONResponse(result)
+    except Exception as exc:
+        return _error(str(exc))
+
+
+async def api_hygiene_review_post(request: Request) -> JSONResponse:
+    payload = await _payload(request)
+    payload.setdefault("instance", "onprem")
+    try:
+        result = await anyio.to_thread.run_sync(lambda: backend.portfolio_hygiene_review(**payload))
+        return JSONResponse(result)
+    except Exception as exc:
+        return _error(str(exc))
+
+
+async def api_hygiene_preview(request: Request) -> JSONResponse:
+    payload = await _payload(request)
+    payload.setdefault("instance", "onprem")
+    try:
+        result = await anyio.to_thread.run_sync(lambda: backend.portfolio_hygiene_preview_fix(**payload))
+        return JSONResponse(result, status_code=201)
+    except Exception as exc:
+        return _error(str(exc))
+
+
+async def api_hygiene_apply(request: Request) -> JSONResponse:
+    payload = await _payload(request)
+    preview_id = payload.get("preview_id")
+    if not preview_id:
+        return _error("preview_id is required")
+    try:
+        result = await anyio.to_thread.run_sync(
+            lambda: backend.portfolio_hygiene_apply(preview_id, bool(payload.get("allow_parent_changes", False)))
+        )
+        return JSONResponse(result)
+    except KeyError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(str(exc))
+
+
+async def api_hygiene_findings(request: Request) -> JSONResponse:
+    try:
+        payload = _hygiene_query_payload(request)
+        page = _int_query(request, "page", 1) or 1
+        page_size = _int_query(request, "page_size", 25) or 25
+        category = request.query_params.get("category")
+        auto_fixable = request.query_params.get("auto_fixable")
+        result = await anyio.to_thread.run_sync(lambda: backend.portfolio_hygiene_review(**payload))
+        findings = result.get("findings", [])
+        if category:
+            findings = [row for row in findings if row.get("category") == category]
+        if auto_fixable in {"true", "false"}:
+            expected = auto_fixable == "true"
+            findings = [row for row in findings if bool(row.get("auto_fixable")) is expected]
+        start = max(0, (page - 1) * page_size)
+        rows = findings[start:start + page_size]
+        return JSONResponse({
+            "instance": result.get("instance"),
+            "review_id": result.get("review_id"),
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "count": len(rows),
+                "total": len(findings),
+                "has_previous": page > 1,
+                "has_next": start + page_size < len(findings),
+            },
+            "findings": rows,
+        })
+    except Exception as exc:
+        return _error(str(exc))
+
+
+async def api_hygiene_issue(request: Request) -> JSONResponse:
+    issue_key = request.path_params["issue_key"]
+    try:
+        payload = _hygiene_query_payload(request)
+        result = await anyio.to_thread.run_sync(lambda: backend.portfolio_hygiene_review(**payload))
+        findings = [row for row in result.get("findings", []) if row.get("issue_key") == issue_key]
+        changes = [row for row in result.get("proposed_changes", []) if row.get("issue_key") == issue_key]
+        return JSONResponse({
+            "instance": result.get("instance"),
+            "review_id": result.get("review_id"),
+            "issue_key": issue_key,
+            "findings": findings,
+            "proposed_changes": changes,
+        })
+    except Exception as exc:
+        return _error(str(exc))
+
+
 def console_routes() -> tuple[tuple[str, tuple[str, ...], Any], ...]:
     return (
         ("/console", ("GET",), console_index),
@@ -338,6 +495,11 @@ def console_routes() -> tuple[tuple[str, tuple[str, ...], Any], ...]:
         ("/api/executions/{preview_id}/apply", ("POST",), api_execution_apply),
         ("/api/executions/{preview_id}/reject", ("POST",), api_execution_reject),
         ("/api/executions", ("GET",), api_execution_history),
+        ("/api/platform/configuration", ("GET",), api_platform_configuration),
+        ("/api/platform/connectors", ("GET",), api_platform_connectors),
+        ("/api/platform/audit", ("GET",), api_platform_audit),
+        ("/api/platform/metrics", ("GET",), api_platform_metrics),
+        ("/api/platform/diagnostics", ("GET",), api_platform_diagnostics),
         ("/api/orchestration/engineering-review", ("POST",), api_orchestration_engineering_review),
         ("/api/orchestration/sprint-analysis", ("POST",), api_orchestration_sprint_analysis),
         ("/api/orchestration/sprint-close-preview", ("POST",), api_orchestration_sprint_close_preview),
@@ -346,4 +508,11 @@ def console_routes() -> tuple[tuple[str, tuple[str, ...], Any], ...]:
         ("/api/orchestration/backlog-review", ("POST",), api_orchestration_backlog_review),
         ("/api/orchestration/security-remediation-analysis", ("POST",), api_orchestration_security_remediation),
         ("/api/orchestration/saved-view-review", ("POST",), api_orchestration_saved_view_review),
+        ("/api/hygiene/context", ("GET",), api_hygiene_context),
+        ("/api/hygiene/review", ("GET",), api_hygiene_review_get),
+        ("/api/hygiene/review", ("POST",), api_hygiene_review_post),
+        ("/api/hygiene/preview", ("POST",), api_hygiene_preview),
+        ("/api/hygiene/apply", ("POST",), api_hygiene_apply),
+        ("/api/hygiene/findings", ("GET",), api_hygiene_findings),
+        ("/api/hygiene/issues/{issue_key}", ("GET",), api_hygiene_issue),
     )

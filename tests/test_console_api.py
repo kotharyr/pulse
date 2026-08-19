@@ -119,6 +119,47 @@ class FakeConsoleBackend:
         self.calls.append(("saved_view_review", view_name, payload))
         return {"workflow": "saved_view_review", "summary": view_name}
 
+    def portfolio_hygiene_review(self, **payload):
+        self.calls.append(("portfolio_hygiene_review", payload))
+        return {
+            "instance": payload.get("instance", "onprem"),
+            "review_id": "review-1",
+            "total_checked": 2,
+            "initiative_ancestry_valid_count": 1,
+            "missing_parent_count": 1,
+            "invalid_ancestry_count": 1,
+            "date_violations": {"total": 1, "missing": 1, "incorrect": 0},
+            "label_violations": {"total": 1, "missing": 1, "wrong_quarter": 0, "multiple": 0},
+            "auto_fixable_count": 2,
+            "manual_review_count": 1,
+            "findings": [{"issue_key": "ENG-1", "category": "dates", "auto_fixable": True}],
+            "proposed_changes": [{"issue_key": "ENG-1", "category": "dates"}],
+            "confidence": {"level": "high"},
+        }
+
+    def portfolio_hygiene_context(self, instance="onprem", quarter=None):
+        self.calls.append(("portfolio_hygiene_context", instance, quarter))
+        return {
+            "instance": instance,
+            "fiscal_quarter": {"name": quarter or "FY27Q1", "start": "2026-08-01", "end": "2026-10-31"},
+            "team_options": ["Platform Excellence"],
+            "pt_options": ["Muon", "Atlas", "Phoenix", "Dragon"],
+            "field_names": {"team": "Team", "pt": "PT"},
+        }
+
+    def portfolio_hygiene_preview_fix(self, **payload):
+        self.calls.append(("portfolio_hygiene_preview_fix", payload))
+        return {
+            "preview_id": "hygiene-preview",
+            "action": "portfolio_hygiene_fix",
+            "status": "previewed",
+            "preview": {"change_count": 2, "can_apply": False, "changes": []},
+        }
+
+    def portfolio_hygiene_apply(self, preview_id, allow_parent_changes=False):
+        self.calls.append(("portfolio_hygiene_apply", preview_id, allow_parent_changes))
+        return {"preview_id": preview_id, "applied": False, "reason": "MODE must be safe_apply"}
+
     def create_execution_preview(self, action, parameters):
         self.calls.append(("preview", action, parameters))
         return {"preview_id": "abc123", "action": action, "parameters": parameters, "status": "previewed", "preview": {"can_apply": False}}
@@ -134,6 +175,26 @@ class FakeConsoleBackend:
     def execution_history(self, limit=50):
         self.calls.append(("history", limit))
         return {"executions": [{"preview_id": "abc123", "status": "rejected"}]}
+
+    def platform_configuration(self):
+        self.calls.append(("platform_configuration",))
+        return {"product": "Pulse", "mode": "recommend_only", "connectors": []}
+
+    def connector_status(self):
+        self.calls.append(("connector_status",))
+        return {"connectors": [{"name": "cloud", "connector": "jira", "status": "configured"}]}
+
+    def audit_events(self, limit=100):
+        self.calls.append(("audit", limit))
+        return {"events": [{"action": "diagnostics_read", "outcome": "succeeded"}], "count": 1}
+
+    def system_metrics(self):
+        self.calls.append(("metrics",))
+        return {"uptime_seconds": 1, "saved_views": 1, "execution_records": 1}
+
+    def platform_diagnostics(self):
+        self.calls.append(("diagnostics",))
+        return {"product": "Pulse", "status": "ready", "metrics": {}, "configuration": {}}
 
 
 def test_console_rest_endpoints(monkeypatch):
@@ -176,6 +237,18 @@ def test_console_rest_endpoints(monkeypatch):
         assert client.post("/api/orchestration/security-remediation-analysis", json={"instance": "cloud"}).json()["workflow"] == "security_remediation_analysis"
         assert client.post("/api/orchestration/saved-view-review", json={"view_name": "Security"}).json()["workflow"] == "saved_view_review"
         assert client.post("/api/orchestration/sprint-close-apply", json={}).status_code == 400
+        assert client.get("/api/hygiene/context", params={"instance": "onprem"}).json()["fiscal_quarter"]["name"] == "FY27Q1"
+        assert client.get("/api/hygiene/review", params={"instance": "onprem", "pt": "Muon"}).json()["review_id"] == "review-1"
+        assert client.post("/api/hygiene/review", json={"instance": "onprem", "team": "Platform Excellence", "pt": "Muon"}).json()["total_checked"] == 2
+        assert client.get("/api/hygiene/findings", params={"instance": "onprem", "page": 1, "page_size": 1}).json()["pagination"]["total"] == 1
+        assert client.get("/api/hygiene/issues/ENG-1", params={"instance": "onprem"}).json()["findings"][0]["issue_key"] == "ENG-1"
+        assert client.post("/api/hygiene/preview", json={"instance": "onprem"}).status_code == 201
+        assert client.post("/api/hygiene/apply", json={"preview_id": "hygiene-preview"}).json()["reason"] == "MODE must be safe_apply"
+        assert client.get("/api/platform/configuration").json()["product"] == "Pulse"
+        assert client.get("/api/platform/connectors").json()["connectors"][0]["status"] == "configured"
+        assert client.get("/api/platform/audit", params={"limit": 5}).json()["count"] == 1
+        assert client.get("/api/platform/metrics").json()["saved_views"] == 1
+        assert client.get("/api/platform/diagnostics").json()["status"] == "ready"
 
         preview = client.post(
             "/api/executions/preview",
@@ -196,6 +269,11 @@ def test_console_rest_endpoints(monkeypatch):
     assert ("security", "cloud", "ENG", 20) in fake.calls
     assert ("engineering_review", {"instance": "cloud", "project": "ENG"}) in fake.calls
     assert ("sprint_close_apply_workflow", "abc123") in fake.calls
+    assert ("portfolio_hygiene_preview_fix", {"instance": "onprem"}) in fake.calls
+    assert ("portfolio_hygiene_apply", "hygiene-preview", False) in fake.calls
+    assert ("portfolio_hygiene_context", "onprem", None) in fake.calls
+    assert ("platform_configuration",) in fake.calls
+    assert ("audit", 5) in fake.calls
 
 
 def test_console_rest_reports_missing_required_search_params(monkeypatch):
@@ -219,15 +297,21 @@ def test_console_static_assets_are_served(monkeypatch):
         styles = client.get("/console/styles.css")
 
     assert index.status_code == 200
-    assert "Ops Console" in index.text
+    assert "Pulse" in index.text
+    assert "Engineering leadership, every morning." in index.text
     assert "sidebar-toggle" in index.text
     assert "theme-toggle" in index.text
     assert "Environment" in index.text
     assert "Saved Operational Views" in index.text
     assert "Repository Inventory" in index.text
     assert "Operational Security Issues" in index.text
-    assert "Engineering Workflows" in index.text
+    assert "Portfolio Hygiene" in index.text
+    assert "Platform Excellence" in index.text
+    assert "Muon" in index.text
+    assert "Dragon" in index.text
+    assert "Engineering Review" in index.text
     assert "Sprint Close Preview" in index.text
+    assert "Pulse System Health" in index.text
     assert 'value="ORDER BY updated DESC"' not in index.text
     assert script.status_code == 200
     assert "setSidebarCollapsed" in script.text
@@ -237,11 +321,17 @@ def test_console_static_assets_are_served(monkeypatch):
     assert "loadEnvironment" in script.text
     assert "loadRepositories" in script.text
     assert "loadSecurity" in script.text
+    assert "loadHygiene" in script.text
+    assert "/api/hygiene/context" in script.text
     assert "runWorkflow" in script.text
+    assert "loadPlatform" in script.text
     assert "/api/orchestration/" in script.text
+    assert "/api/platform/" in script.text
     assert "/api/views" in script.text
     assert styles.status_code == 200
     assert ".sidebar-collapsed" in styles.text
     assert ".sprint-ring" in styles.text
     assert ".saved-view-layout" in styles.text
     assert ".workflow-grid" in styles.text
+    assert ".hygiene-filters" in styles.text
+    assert ".pulse-hero" in styles.text

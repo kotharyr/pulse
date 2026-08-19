@@ -46,6 +46,9 @@ get_saved_view = backend.get_saved_view
 search_saved_view = backend.search_saved_view
 save_operational_view = backend.save_operational_view
 delete_operational_view = backend.delete_operational_view
+portfolio_hygiene_review_backend = backend.portfolio_hygiene_review
+portfolio_hygiene_preview_fix_backend = backend.portfolio_hygiene_preview_fix
+portfolio_hygiene_apply_backend = backend.portfolio_hygiene_apply
 
 
 def engineering_review(
@@ -149,6 +152,40 @@ def saved_view_review(
     return backend.saved_view_review(view_name, instance, page, page_size, limit)
 
 
+def portfolio_hygiene_review(
+    instance: str = "onprem",
+    quarter: str | None = None,
+    project: str | None = None,
+    team: str | None = None,
+    pt: str | None = None,
+    saved_view: str | None = None,
+    limit: int = 500,
+) -> dict:
+    """Review on-prem portfolio hierarchy and quarter hygiene. Returns ancestry coverage, date violations, label violations, safe fixes, manual reviews, confidence, and data-quality notes. Read-only."""
+    return backend.portfolio_hygiene_review(instance, quarter, project, team, pt, saved_view, limit)
+
+
+def portfolio_hygiene_preview_fix(
+    instance: str = "onprem",
+    quarter: str | None = None,
+    project: str | None = None,
+    team: str | None = None,
+    pt: str | None = None,
+    saved_view: str | None = None,
+    limit: int = 500,
+    findings: list[dict[str, Any]] | None = None,
+    proposed_changes: list[dict[str, Any]] | None = None,
+    categories: list[str] | None = None,
+) -> dict:
+    """Create a stored Portfolio Hygiene fix preview. Includes exact issue-level date and label changes, current values, proposed values, and manual-review exclusions. Never writes."""
+    return backend.portfolio_hygiene_preview_fix(instance, quarter, project, team, pt, saved_view, limit, findings, proposed_changes, categories)
+
+
+def portfolio_hygiene_apply(preview_id: str, allow_parent_changes: bool = False) -> dict:
+    """Apply a stored Portfolio Hygiene preview. Requires MODE=safe_apply, revalidates source state, and applies only safe date/label fixes by default."""
+    return backend.portfolio_hygiene_apply(preview_id, allow_parent_changes)
+
+
 def search_issues(instance: str, jql: str, fields: list[str] | None = None, limit: int = 100) -> dict:
     """Low-level/advanced diagnostic: run raw JQL search against Jira. Prefer engineering_review, backlog_review, saved_view_review, or sprint_analysis for natural-language operations."""
     return backend.search_issues(instance, jql, fields, limit)
@@ -237,15 +274,18 @@ def engineering_health(instance: str, jql: str, stale_days: int = 90, limit: int
 
 
 async def health(_: Request) -> JSONResponse:
-    report = await anyio.to_thread.run_sync(lambda: system_readiness(check_connections=True))
-    return JSONResponse({
-        "status": "ok" if report["ok"] and report.get("connections_ok", False) else "not_ready",
-        "mode": report["mode"],
-        "instances": [{"name": row["name"], "type": row["type"], "credentials_loaded": row["credentials_loaded"]} for row in report["instances"]],
-        "connections": report["connections"],
-        "errors": report["errors"],
-        "warnings": report["warnings"],
-    }, status_code=200 if report["ok"] and report.get("connections_ok", False) else 503)
+    result = await anyio.to_thread.run_sync(backend.platform_health)
+    return JSONResponse(result)
+
+
+async def ready(_: Request) -> JSONResponse:
+    result = await anyio.to_thread.run_sync(backend.platform_readiness)
+    return JSONResponse(result, status_code=200 if result["ready"] else 503)
+
+
+async def diagnostics(_: Request) -> JSONResponse:
+    result = await anyio.to_thread.run_sync(backend.platform_diagnostics)
+    return JSONResponse(result, status_code=200 if result["status"] == "ready" else 503)
 
 
 async def liveness(_: Request) -> JSONResponse:
@@ -276,6 +316,8 @@ def build_plugin_registry() -> PluginRegistry:
         tools=(system_readiness,),
         routes=(
             ("/health", ("GET",), health),
+            ("/ready", ("GET",), ready),
+            ("/diagnostics", ("GET",), diagnostics),
             ("/health/live", ("GET",), liveness),
         ),
     ))
@@ -287,6 +329,9 @@ def build_plugin_registry() -> PluginRegistry:
             sprint_close_preview,
             sprint_close_apply,
             portfolio_review,
+            portfolio_hygiene_review,
+            portfolio_hygiene_preview_fix,
+            portfolio_hygiene_apply,
             backlog_review,
             security_remediation_analysis,
             saved_view_review,

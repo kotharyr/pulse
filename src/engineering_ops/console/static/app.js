@@ -1,6 +1,6 @@
 const FALLBACK_DEFAULT_JQL = "updated >= -30d ORDER BY updated DESC";
-const VIEW_TITLE_FALLBACK = "Jira Management";
-const THEME_KEY = "engineeringOpsConsole.theme.v1";
+const VIEW_TITLE_FALLBACK = "Engineering Review";
+const THEME_KEY = "engineeringOpsConsole.theme.v2";
 const TASK_NOTES_KEY = "engineeringOpsConsole.taskNotes.v1";
 const SIDEBAR_KEY = "engineeringOpsConsole.sidebarCollapsed.v1";
 
@@ -13,13 +13,15 @@ const state = {
   workflowResult: null,
   savedViews: [],
   jqlTouched: false,
-  activeView: "jira-view",
-  theme: "light",
+  activeView: "workflow-view",
+  theme: "dark",
   sidebarCollapsed: false,
   sprintDiscovery: null,
   environment: null,
   repositories: [],
   security: null,
+  hygieneReview: null,
+  hygienePreviewId: null,
   selectedSavedView: null,
 };
 
@@ -88,6 +90,7 @@ const els = {
   workflowPreview: document.getElementById("workflow-preview"),
   workflowIssues: document.getElementById("workflow-issues"),
   workflowOutput: document.getElementById("workflow-output"),
+  jumpButtons: document.querySelectorAll("[data-jump-view]"),
   taskSavedViews: document.getElementById("task-saved-views"),
   taskNotes: document.getElementById("task-notes"),
   envRefresh: document.getElementById("env-refresh"),
@@ -122,6 +125,42 @@ const els = {
   securityMode: document.getElementById("security-mode"),
   securityStatus: document.getElementById("security-status"),
   securityActions: document.getElementById("security-actions"),
+  hygieneStatus: document.getElementById("hygiene-status"),
+  hygieneReview: document.getElementById("hygiene-review"),
+  hygieneQuarter: document.getElementById("hygiene-quarter"),
+  hygieneProject: document.getElementById("hygiene-project"),
+  hygieneTeam: document.getElementById("hygiene-team"),
+  hygienePt: document.getElementById("hygiene-pt"),
+  hygieneSavedView: document.getElementById("hygiene-saved-view"),
+  hygieneIssueType: document.getElementById("hygiene-type"),
+  hygieneCategory: document.getElementById("hygiene-category"),
+  hygieneFixability: document.getElementById("hygiene-fixability"),
+  hygieneLimit: document.getElementById("hygiene-limit"),
+  hygieneAncestry: document.getElementById("hygiene-ancestry"),
+  hygieneDateCount: document.getElementById("hygiene-date-count"),
+  hygieneMissingLabels: document.getElementById("hygiene-missing-labels"),
+  hygieneWrongLabels: document.getElementById("hygiene-wrong-labels"),
+  hygieneSafeFixes: document.getElementById("hygiene-safe-fixes"),
+  hygieneManual: document.getElementById("hygiene-manual"),
+  hygieneFindings: document.getElementById("hygiene-findings"),
+  hygienePreviewAll: document.getElementById("hygiene-preview-all"),
+  hygienePreviewSelected: document.getElementById("hygiene-preview-selected"),
+  hygieneReject: document.getElementById("hygiene-reject"),
+  hygieneApply: document.getElementById("hygiene-apply"),
+  hygienePreviewStatus: document.getElementById("hygiene-preview-status"),
+  hygienePreviewOutput: document.getElementById("hygiene-preview-output"),
+  hygieneHistory: document.getElementById("hygiene-history"),
+  systemRefresh: document.getElementById("system-refresh"),
+  systemReadiness: document.getElementById("system-readiness"),
+  systemMode: document.getElementById("system-mode"),
+  systemConnectorsCount: document.getElementById("system-connectors-count"),
+  systemAuditCount: document.getElementById("system-audit-count"),
+  systemConfig: document.getElementById("system-config"),
+  systemConnectors: document.getElementById("system-connectors"),
+  systemMetrics: document.getElementById("system-metrics"),
+  systemAudit: document.getElementById("system-audit"),
+  systemDiagnosticsStatus: document.getElementById("system-diagnostics-status"),
+  systemDiagnostics: document.getElementById("system-diagnostics"),
   toast: document.getElementById("toast"),
 };
 
@@ -231,8 +270,7 @@ function setTheme(theme) {
 
 function initTheme() {
   const stored = localStorage.getItem(THEME_KEY);
-  const preferredDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (preferredDark ? "dark" : "light"));
+  setTheme(stored || "dark");
 }
 
 function setSidebarCollapsed(collapsed) {
@@ -259,6 +297,23 @@ function setActiveView(viewId) {
   if (viewId === "saved-views-view") loadViews();
   if (viewId === "repositories-view") loadRepositories();
   if (viewId === "security-view") loadSecurity();
+  if (viewId === "hygiene-view") {
+    preferOnPremInstance();
+    loadHygieneContext().then(() => loadHygiene());
+  }
+  if (viewId === "system-view") loadPlatform();
+}
+
+function preferOnPremInstance() {
+  const current = state.instances.find((item) => item.name === state.instance);
+  if (current && ["datacenter", "server"].includes(current.kind)) return;
+  const onprem = state.instances.find((item) => ["datacenter", "server"].includes(item.kind) || item.name === "onprem");
+  if (!onprem) return;
+  state.instance = onprem.name;
+  els.instance.value = onprem.name;
+  if (!state.jqlTouched && els.jql) {
+    els.jql.value = defaultJqlForInstance(state.instance);
+  }
 }
 
 function fieldValue(issue, name) {
@@ -760,6 +815,293 @@ async function loadSecurity() {
   }
 }
 
+function hygienePayload() {
+  return compactPayload({
+    instance: state.instance,
+    quarter: els.hygieneQuarter?.value.trim(),
+    project: els.hygieneProject?.value.trim(),
+    team: els.hygieneTeam?.value,
+    pt: els.hygienePt?.value,
+    saved_view: els.hygieneSavedView?.value.trim(),
+    limit: Number(els.hygieneLimit?.value || 500),
+  });
+}
+
+function setSelectOptions(select, options, {includeAll = false, allLabel = "All"} = {}) {
+  if (!select) return;
+  const current = select.value;
+  const rows = includeAll ? [{value: "", label: allLabel}] : [];
+  rows.push(...(options || []).map((value) => ({value, label: value})));
+  select.innerHTML = rows.map((row) => `<option value="${escapeHtml(row.value)}">${escapeHtml(row.label)}</option>`).join("");
+  if (rows.some((row) => row.value === current)) {
+    select.value = current;
+  } else if (rows.length) {
+    select.value = rows[0].value;
+  }
+}
+
+async function loadHygieneContext() {
+  if (!els.hygieneQuarter || !state.instance) return;
+  try {
+    const params = new URLSearchParams({instance: state.instance});
+    const context = await api(`/api/hygiene/context?${params}`);
+    if (context.fiscal_quarter?.name) {
+      els.hygieneQuarter.value = context.fiscal_quarter.name;
+      els.hygieneQuarter.title = `${context.fiscal_quarter.start || ""} to ${context.fiscal_quarter.end || ""}`.trim();
+    }
+    setSelectOptions(els.hygieneTeam, context.team_options || ["Platform Excellence"]);
+    setSelectOptions(els.hygienePt, context.pt_options || ["Muon", "Atlas", "Phoenix", "Dragon"], {includeAll: true, allLabel: "All PTs"});
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+function printableValue(value) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (value && typeof value === "object") return JSON.stringify(value);
+  return value ?? "";
+}
+
+function filteredHygieneFindings() {
+  const findings = state.hygieneReview?.findings || [];
+  const type = els.hygieneIssueType?.value || "";
+  const category = els.hygieneCategory?.value || "";
+  const fixability = els.hygieneFixability?.value || "";
+  return findings.filter((finding) => {
+    if (type && finding.issue_type !== type) return false;
+    if (category && finding.category !== category) return false;
+    if (fixability === "auto" && !finding.auto_fixable) return false;
+    if (fixability === "manual" && finding.auto_fixable) return false;
+    return true;
+  });
+}
+
+function selectedHygieneFindings() {
+  const selected = new Set(Array.from(document.querySelectorAll("[data-hygiene-finding]:checked")).map((input) => input.value));
+  return (state.hygieneReview?.findings || []).filter((finding) => selected.has(finding.id));
+}
+
+function renderHygieneFindings() {
+  const rows = filteredHygieneFindings();
+  if (!rows.length) {
+    els.hygieneFindings.innerHTML = '<tr><td colspan="11" class="empty">No findings match the current filters.</td></tr>';
+    els.hygienePreviewSelected.disabled = true;
+    return;
+  }
+  els.hygieneFindings.innerHTML = rows.map((finding) => {
+    const path = (finding.ancestry_path || []).map((row) => row.issue_key).filter(Boolean).join(" > ");
+    const selectedTeam = els.hygieneTeam?.value || finding.team;
+    const teamPt = [finding.team || selectedTeam, finding.pt || finding.team_pt].filter(Boolean).join(" / ");
+    return `
+      <tr>
+        <td><input type="checkbox" value="${escapeHtml(finding.id)}" data-hygiene-finding ${finding.auto_fixable ? "" : "disabled"}></td>
+        <td class="key-cell">${escapeHtml(finding.issue_key)}</td>
+        <td>${escapeHtml(finding.issue_type || "")}</td>
+        <td>${escapeHtml(teamPt || finding.project || "")}</td>
+        <td>${escapeHtml(finding.target_quarter || "")}</td>
+        <td>${escapeHtml(finding.problem || "")}</td>
+        <td>${escapeHtml(printableValue(finding.current_value))}</td>
+        <td>${escapeHtml(printableValue(finding.expected_value))}</td>
+        <td>${finding.auto_fixable ? "Yes" : "Manual"}</td>
+        <td>${escapeHtml(path)}</td>
+        <td>${escapeHtml(finding.recommended_action || "")}</td>
+      </tr>
+    `;
+  }).join("");
+  els.hygieneFindings.querySelectorAll("[data-hygiene-finding]").forEach((input) => {
+    input.addEventListener("change", () => {
+      els.hygienePreviewSelected.disabled = selectedHygieneFindings().length === 0;
+    });
+  });
+  els.hygienePreviewSelected.disabled = true;
+}
+
+function renderHygiene(data) {
+  state.hygieneReview = data;
+  const total = Number(data.total_checked || 0);
+  const valid = Number(data.initiative_ancestry_valid_count || 0);
+  const coverage = total ? (valid / total) * 100 : 0;
+  const dates = data.date_violations || {};
+  const labels = data.label_violations || {};
+  els.hygieneStatus.textContent = data.review_id ? `Review ${data.review_id}` : "Review complete";
+  if (data.fiscal_quarter?.name && !els.hygieneQuarter.value) {
+    els.hygieneQuarter.value = data.fiscal_quarter.name;
+  }
+  els.hygieneAncestry.textContent = formatPercent(coverage);
+  els.hygieneDateCount.textContent = formatNumber(dates.total || 0);
+  els.hygieneMissingLabels.textContent = formatNumber(labels.missing || 0);
+  els.hygieneWrongLabels.textContent = formatNumber((labels.wrong_quarter || 0) + (labels.multiple || 0));
+  els.hygieneSafeFixes.textContent = formatNumber(data.auto_fixable_count || 0);
+  els.hygieneManual.textContent = formatNumber(data.manual_review_count || 0);
+  els.hygienePreviewAll.disabled = !(data.proposed_changes || []).length;
+  renderHygieneFindings();
+}
+
+async function loadHygiene() {
+  if (!els.hygieneReview || !state.instance) return;
+  try {
+    els.hygieneReview.disabled = true;
+    els.hygieneStatus.textContent = "Reviewing";
+    const data = await api("/api/hygiene/review", {
+      method: "POST",
+      body: JSON.stringify(hygienePayload()),
+    });
+    renderHygiene(data);
+  } catch (error) {
+    els.hygieneStatus.textContent = "Unavailable";
+    toast(error.message);
+  } finally {
+    els.hygieneReview.disabled = false;
+  }
+}
+
+function renderHygienePreview(record) {
+  state.hygienePreviewId = record.preview_id;
+  state.currentPreviewId = record.preview_id;
+  const preview = record.preview || {};
+  els.hygienePreviewStatus.textContent = preview.can_apply ? "Ready for safe apply" : "Apply blocked by mode or preview state";
+  els.hygienePreviewOutput.textContent = JSON.stringify(record, null, 2);
+  els.hygieneReject.disabled = false;
+  els.hygieneApply.disabled = !preview.can_apply;
+}
+
+async function previewHygieneFixes({selected = false} = {}) {
+  const selectedFindings = selected ? selectedHygieneFindings() : [];
+  if (selected && !selectedFindings.length) {
+    toast("Select at least one auto-fixable finding");
+    return;
+  }
+  const category = els.hygieneCategory?.value;
+  const payload = selected
+    ? {...hygienePayload(), findings: selectedFindings}
+    : {...hygienePayload(), categories: category ? [category] : []};
+  try {
+    els.hygienePreviewAll.disabled = true;
+    els.hygienePreviewSelected.disabled = true;
+    const record = await api("/api/hygiene/preview", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    renderHygienePreview(record);
+    await loadHistory();
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    els.hygienePreviewAll.disabled = !(state.hygieneReview?.proposed_changes || []).length;
+    els.hygienePreviewSelected.disabled = selectedHygieneFindings().length === 0;
+  }
+}
+
+async function applyHygienePreview() {
+  if (!state.hygienePreviewId) return;
+  const confirmed = window.confirm("Apply the stored Portfolio Hygiene preview? Only safe date and label fixes will be attempted.");
+  if (!confirmed) return;
+  try {
+    const result = await api("/api/hygiene/apply", {
+      method: "POST",
+      body: JSON.stringify({preview_id: state.hygienePreviewId}),
+    });
+    els.hygienePreviewOutput.textContent = JSON.stringify(result, null, 2);
+    els.hygienePreviewStatus.textContent = result.applied ? "Apply succeeded" : result.reason || "Apply failed";
+    els.hygieneApply.disabled = true;
+    await loadHistory();
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function rejectHygienePreview() {
+  if (!state.hygienePreviewId) return;
+  try {
+    const record = await api(`/api/executions/${encodeURIComponent(state.hygienePreviewId)}/reject`, {method: "POST"});
+    els.hygienePreviewOutput.textContent = JSON.stringify(record, null, 2);
+    els.hygienePreviewStatus.textContent = "Preview rejected";
+    state.hygienePreviewId = null;
+    els.hygieneReject.disabled = true;
+    els.hygieneApply.disabled = true;
+    await loadHistory();
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+function renderKeyValues(element, rows) {
+  if (!rows?.length) {
+    element.innerHTML = '<div class="empty">No data.</div>';
+    return;
+  }
+  element.innerHTML = rows.map(([key, value]) => `
+    <div class="mini-item">
+      <strong>${escapeHtml(key)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </div>
+  `).join("");
+}
+
+function renderPlatform({configuration, connectors, audit, metrics, diagnostics}) {
+  const connectorRows = connectors.connectors || configuration.connectors || [];
+  const auditRows = audit.events || [];
+  els.systemReadiness.textContent = diagnostics.status || "unknown";
+  els.systemMode.textContent = configuration.mode || "unknown";
+  els.systemConnectorsCount.textContent = formatNumber(connectorRows.length);
+  els.systemAuditCount.textContent = formatNumber(audit.count ?? auditRows.length);
+  els.systemDiagnosticsStatus.textContent = diagnostics.status || "loaded";
+  els.systemDiagnostics.textContent = JSON.stringify(diagnostics, null, 2);
+
+  renderKeyValues(els.systemConfig, [
+    ["Product", configuration.product || "Pulse"],
+    ["MCP", `${configuration.mcp?.host || "unknown"}:${configuration.mcp?.port || "unknown"}`],
+    ["Authentication", configuration.mcp?.authentication_required ? "required" : "loopback/dev"],
+    ["Repo Root", configuration.local_repo_root || "not configured"],
+    ["Scheduler", configuration.scheduler?.environment_refresh?.mode || "manual"],
+  ]);
+
+  renderWorkflowList(els.systemConnectors, connectorRows, "No connectors.", (row) => `
+    <div class="mini-item ${row.status === "needs_credentials" ? "blocked" : ""}">
+      <strong>${escapeHtml(row.name)}</strong>
+      <span>${escapeHtml(row.connector)} | ${escapeHtml(row.status)}</span>
+      <span class="list-meta">${escapeHtml(row.type || "")}${row.base_url ? ` | ${escapeHtml(row.base_url)}` : ""}</span>
+    </div>
+  `);
+
+  renderKeyValues(els.systemMetrics, [
+    ["Uptime", `${formatNumber(metrics.uptime_seconds)}s`],
+    ["Python", metrics.python_version || "unknown"],
+    ["Cached Environments", formatNumber(metrics.cached_environments)],
+    ["Saved Views", formatNumber(metrics.saved_views)],
+    ["Execution Records", formatNumber(metrics.execution_records)],
+  ]);
+
+  renderWorkflowList(els.systemAudit, auditRows, "No audit events.", (row) => `
+    <div class="mini-item">
+      <strong>${escapeHtml(row.action)} | ${escapeHtml(row.outcome)}</strong>
+      <span>${escapeHtml(row.target || "platform")}</span>
+      <span class="list-meta">${escapeHtml(row.created_at)}</span>
+    </div>
+  `);
+}
+
+async function loadPlatform() {
+  if (!els.systemRefresh) return;
+  try {
+    els.systemRefresh.disabled = true;
+    els.systemDiagnosticsStatus.textContent = "Loading";
+    const [configuration, connectors, audit, metrics, diagnostics] = await Promise.all([
+      api("/api/platform/configuration"),
+      api("/api/platform/connectors"),
+      api("/api/platform/audit?limit=12"),
+      api("/api/platform/metrics"),
+      api("/api/platform/diagnostics"),
+    ]);
+    renderPlatform({configuration, connectors, audit, metrics, diagnostics});
+  } catch (error) {
+    els.systemDiagnosticsStatus.textContent = "Unavailable";
+    toast(error.message);
+  } finally {
+    els.systemRefresh.disabled = false;
+  }
+}
+
 function workflowPayload(kind) {
   const project = els.workflowProject.value.trim();
   const team = els.workflowTeam.value.trim();
@@ -1088,6 +1430,7 @@ async function loadHistory() {
     const rows = data.executions || [];
     if (!rows.length) {
       els.history.innerHTML = '<div class="empty">No execution history.</div>';
+      if (els.hygieneHistory) els.hygieneHistory.innerHTML = '<div class="empty">No hygiene execution history.</div>';
       return;
     }
     els.history.innerHTML = rows.map((row) => `
@@ -1096,8 +1439,19 @@ async function loadHistory() {
         <span class="history-meta">${escapeHtml(row.instance)} | ${escapeHtml(row.preview_id)} | ${escapeHtml(row.updated_at)}</span>
       </div>
     `).join("");
+    if (els.hygieneHistory) {
+      const hygieneRows = rows.filter((row) => row.action === "portfolio_hygiene_fix");
+      els.hygieneHistory.innerHTML = hygieneRows.length ? hygieneRows.map((row) => `
+        <div class="history-item">
+          <strong>${escapeHtml(row.status)}</strong>
+          <span class="history-meta">${escapeHtml(row.instance)} | ${escapeHtml(row.preview_id)}</span>
+          <span class="history-meta">${escapeHtml(row.updated_at)}</span>
+        </div>
+      `).join("") : '<div class="empty">No hygiene execution history.</div>';
+    }
   } catch (error) {
     els.history.innerHTML = '<div class="empty">History unavailable.</div>';
+    if (els.hygieneHistory) els.hygieneHistory.innerHTML = '<div class="empty">History unavailable.</div>';
   }
 }
 
@@ -1147,6 +1501,10 @@ function bindEvents() {
     await loadSprintDiscovery();
     if (state.activeView === "environment-view") await loadEnvironment();
     if (state.activeView === "security-view") await loadSecurity();
+    if (state.activeView === "hygiene-view") {
+      await loadHygieneContext();
+      await loadHygiene();
+    }
   });
   els.jql.addEventListener("input", () => {
     state.jqlTouched = true;
@@ -1173,11 +1531,23 @@ function bindEvents() {
   els.workflowButtons.forEach((button) => {
     button.addEventListener("click", () => runWorkflow(button.dataset.workflow));
   });
+  els.jumpButtons.forEach((button) => {
+    button.addEventListener("click", () => setActiveView(button.dataset.jumpView));
+  });
   els.envRefresh.addEventListener("click", () => loadEnvironment({refresh: true}));
   els.opsViewsRefresh.addEventListener("click", loadViews);
   els.repoRefresh.addEventListener("click", loadRepositories);
   els.repoFilter.addEventListener("input", () => renderRepositories());
   els.securityRefresh.addEventListener("click", loadSecurity);
+  els.hygieneReview.addEventListener("click", loadHygiene);
+  els.hygienePreviewAll.addEventListener("click", () => previewHygieneFixes({selected: false}));
+  els.hygienePreviewSelected.addEventListener("click", () => previewHygieneFixes({selected: true}));
+  els.hygieneApply.addEventListener("click", applyHygienePreview);
+  els.hygieneReject.addEventListener("click", rejectHygienePreview);
+  [els.hygieneIssueType, els.hygieneCategory, els.hygieneFixability].forEach((control) => {
+    control.addEventListener("change", renderHygieneFindings);
+  });
+  els.systemRefresh.addEventListener("click", loadPlatform);
 }
 
 async function init() {

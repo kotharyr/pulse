@@ -8,11 +8,13 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
 from statistics import mean
+from time import monotonic
 from typing import Any, Callable
 
 from engineering_ops.adapters.jira import JiraClient
 from engineering_ops.config import Settings, configuration_report, settings
 from engineering_ops.runtime import client as default_client
+from engineering_ops.services.audit import AuditTrail
 from engineering_ops.services.environment import (
     EnvironmentCache,
     discover_environment_model,
@@ -24,6 +26,8 @@ from engineering_ops.services.fields import resolve_field, resolve_value_for_iss
 from engineering_ops.services.health import engineering_health as health_summary
 from engineering_ops.services.executions import ExecutionHistory
 from engineering_ops.services.orchestration import EngineeringOrchestrator
+from engineering_ops.services.platform import PlatformDiagnostics
+from engineering_ops.services.portfolio_hygiene import PortfolioHygieneService
 from engineering_ops.services.repos import discover_repositories, inventory_repositories, scan_manifests
 from engineering_ops.services.saved_views import SavedViewStore
 from engineering_ops.services.security import finding_from_issue, normalize_remediation_actions
@@ -129,12 +133,20 @@ class EngineeringOpsBackend:
     execution_store: ExecutionHistory = field(default_factory=ExecutionHistory)
     environment_cache: EnvironmentCache = field(default_factory=EnvironmentCache)
     saved_view_store: SavedViewStore = field(default_factory=SavedViewStore)
+    audit_trail: AuditTrail = field(default_factory=AuditTrail)
+    started_at: float = field(default_factory=monotonic)
 
     def client(self, instance: str) -> JiraClient:
         return self.client_getter(instance)
 
     def orchestrator(self) -> EngineeringOrchestrator:
         return EngineeringOrchestrator(self)
+
+    def platform(self) -> PlatformDiagnostics:
+        return PlatformDiagnostics(self, self.started_at)
+
+    def portfolio_hygiene_service(self) -> PortfolioHygieneService:
+        return PortfolioHygieneService(self)
 
     def _story_points_field(self, jira: JiraClient) -> tuple[str, str | None]:
         name = jira.cfg.story_points_field_name
@@ -209,6 +221,37 @@ class EngineeringOpsBackend:
             report["connections_ok"] = all(result["ok"] for result in connection_results)
         report["connections"] = connection_results
         return report
+
+    def platform_health(self) -> dict[str, Any]:
+        """Return lightweight Pulse liveness. Does not touch external systems."""
+        return self.platform().health()
+
+    def platform_readiness(self) -> dict[str, Any]:
+        """Return configuration readiness without external connector writes."""
+        return self.platform().readiness()
+
+    def platform_diagnostics(self) -> dict[str, Any]:
+        """Return sanitized diagnostics, metrics, connector status, and audit summary."""
+        self.audit_trail.record("diagnostics_read", target="platform", outcome="succeeded")
+        return self.platform().diagnostics()
+
+    def platform_configuration(self) -> dict[str, Any]:
+        """Return sanitized Pulse configuration for the console."""
+        self.audit_trail.record("configuration_read", target="platform", outcome="succeeded")
+        return self.platform().configuration_summary()
+
+    def connector_status(self) -> dict[str, Any]:
+        """Return configured and planned connector status without testing external writes."""
+        self.audit_trail.record("connector_status_read", target="connectors", outcome="succeeded")
+        return {"connectors": self.platform().connector_status()}
+
+    def system_metrics(self) -> dict[str, Any]:
+        """Return process-local Pulse metrics."""
+        return self.platform().system_metrics()
+
+    def audit_events(self, limit: int = 100) -> dict[str, Any]:
+        """Return recent process-local audit events."""
+        return {"events": self.audit_trail.list(limit), "count": self.audit_trail.count()}
 
     def list_jira_instances(self) -> dict:
         """List the named Jira environments available to the assistant."""
@@ -477,11 +520,15 @@ class EngineeringOpsBackend:
 
     def save_operational_view(self, view: dict[str, Any]) -> dict[str, Any]:
         """Create or update a local saved operational view. Does not write to Jira."""
-        return {"view": self.saved_view_store.upsert(view)}
+        result = {"view": self.saved_view_store.upsert(view)}
+        self.audit_trail.record("saved_view_upsert", target=result["view"].get("name"), outcome="succeeded")
+        return result
 
     def delete_operational_view(self, name: str) -> dict[str, Any]:
         """Delete a local saved operational view. Does not write to Jira."""
-        return self.saved_view_store.delete(name)
+        result = self.saved_view_store.delete(name)
+        self.audit_trail.record("saved_view_delete", target=name, outcome="succeeded")
+        return result
 
     def search_saved_view(self, name: str, page: int = 1, page_size: int = 25) -> dict[str, Any]:
         """Run a local saved operational view by name."""
@@ -941,9 +988,28 @@ class EngineeringOpsBackend:
                 params.get("split_plans"),
                 bool(params.get("rollover_all_incomplete", False)),
             )
+        elif action == "portfolio_hygiene_fix":
+            record = self.portfolio_hygiene_preview_fix(
+                instance=instance,
+                quarter=params.get("quarter"),
+                project=params.get("project"),
+                team=params.get("team"),
+                pt=params.get("pt"),
+                saved_view=params.get("saved_view"),
+                limit=int(params.get("limit", 500)),
+                categories=params.get("categories"),
+            )
+            return record
         else:
             raise ValueError(f"Unsupported execution action: {action}")
-        return self.execution_store.add_preview(action, instance, params, preview)
+        record = self.execution_store.add_preview(action, instance, params, preview)
+        self.audit_trail.record(
+            "execution_preview_created",
+            target=action,
+            outcome="previewed",
+            details={"preview_id": record["preview_id"], "instance": instance},
+        )
+        return record
 
     def apply_execution_preview(self, preview_id: str) -> dict[str, Any]:
         """Apply a stored preview through the same backend write gates used by MCP."""
@@ -978,13 +1044,29 @@ class EngineeringOpsBackend:
                 bool(params.get("rollover_all_incomplete", False)),
                 preview_id=preview_id,
             )
+        elif action == "portfolio_hygiene_fix":
+            result = self.portfolio_hygiene_apply(preview_id)
         else:
             raise ValueError(f"Unsupported execution action: {action}")
-        return self.execution_store.mark_applied(preview_id, result)
+        updated = self.execution_store.mark_applied(preview_id, result)
+        self.audit_trail.record(
+            "execution_preview_applied",
+            target=action,
+            outcome=updated["status"],
+            details={"preview_id": preview_id, "instance": instance, "error": updated.get("error")},
+        )
+        return updated
 
     def reject_execution_preview(self, preview_id: str) -> dict[str, Any]:
         """Reject a stored preview without writing to external systems."""
-        return self.execution_store.mark_rejected(preview_id)
+        record = self.execution_store.mark_rejected(preview_id)
+        self.audit_trail.record(
+            "execution_preview_rejected",
+            target=record["action"],
+            outcome="rejected",
+            details={"preview_id": preview_id, "instance": record["instance"]},
+        )
+        return record
 
     def execution_history(self, limit: int = 50) -> dict[str, Any]:
         """Return recent console execution previews and outcomes."""
@@ -1212,6 +1294,62 @@ class EngineeringOpsBackend:
             page_size=page_size,
             limit=limit,
         )
+
+    def portfolio_hygiene_context(self, instance: str = "onprem", quarter: str | None = None) -> dict[str, Any]:
+        """Return Portfolio Hygiene UI defaults without searching Jira."""
+        return self.portfolio_hygiene_service().context(instance, quarter)
+
+    def portfolio_hygiene_review(
+        self,
+        instance: str = "onprem",
+        quarter: str | None = None,
+        project: str | None = None,
+        team: str | None = None,
+        pt: str | None = None,
+        saved_view: str | None = None,
+        limit: int = 500,
+    ) -> dict[str, Any]:
+        """Review on-prem portfolio hierarchy, quarter dates, and commitment labels. Read-only."""
+        return self.portfolio_hygiene_service().review(
+            instance=instance,
+            quarter=quarter,
+            project=project,
+            team=team,
+            pt=pt,
+            saved_view=saved_view,
+            limit=limit,
+        )
+
+    def portfolio_hygiene_preview_fix(
+        self,
+        instance: str = "onprem",
+        quarter: str | None = None,
+        project: str | None = None,
+        team: str | None = None,
+        pt: str | None = None,
+        saved_view: str | None = None,
+        limit: int = 500,
+        findings: list[dict[str, Any]] | None = None,
+        proposed_changes: list[dict[str, Any]] | None = None,
+        categories: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Create a stored Portfolio Hygiene fix preview. Never writes."""
+        return self.portfolio_hygiene_service().preview_fix(
+            instance=instance,
+            quarter=quarter,
+            project=project,
+            team=team,
+            pt=pt,
+            saved_view=saved_view,
+            limit=limit,
+            findings=findings,
+            proposed_changes=proposed_changes,
+            categories=categories,
+        )
+
+    def portfolio_hygiene_apply(self, preview_id: str, allow_parent_changes: bool = False) -> dict[str, Any]:
+        """Apply a stored Portfolio Hygiene preview in MODE=safe_apply after source revalidation."""
+        return self.portfolio_hygiene_service().apply(preview_id, allow_parent_changes=allow_parent_changes)
 
 
 backend = EngineeringOpsBackend()

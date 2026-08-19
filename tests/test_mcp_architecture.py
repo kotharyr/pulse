@@ -22,6 +22,9 @@ def test_plugin_composition_preserves_tool_names():
         "sprint_close_preview",
         "sprint_close_apply",
         "portfolio_review",
+        "portfolio_hygiene_review",
+        "portfolio_hygiene_preview_fix",
+        "portfolio_hygiene_apply",
         "backlog_review",
         "security_remediation_analysis",
         "saved_view_review",
@@ -54,6 +57,7 @@ def test_mcp_tool_surface_preserves_public_apply_contracts():
     )
     assert tools["search_issues"].description.startswith("Low-level/advanced diagnostic")
     assert "Prepare a concise engineering operations review" in tools["engineering_review"].description
+    assert "Review on-prem portfolio hierarchy" in tools["portfolio_hygiene_review"].description
 
 
 def test_mcp_orchestration_wrappers_call_backend(monkeypatch):
@@ -69,13 +73,19 @@ def test_mcp_orchestration_wrappers_call_backend(monkeypatch):
             self.calls.append(("sprint_close_apply", preview_id))
             return {"workflow": "sprint_close_apply"}
 
+        def portfolio_hygiene_review(self, *args):
+            self.calls.append(("portfolio_hygiene_review", args))
+            return {"review_id": "review-1"}
+
     fake = FakeBackend()
     monkeypatch.setattr(server_module, "backend", fake)
 
     assert server_module.engineering_review("cloud")["workflow"] == "engineering_review"
     assert server_module.sprint_close_apply("preview-1")["workflow"] == "sprint_close_apply"
+    assert server_module.portfolio_hygiene_review("onprem")["review_id"] == "review-1"
     assert fake.calls[0][0] == "engineering_review"
     assert fake.calls[1] == ("sprint_close_apply", "preview-1")
+    assert fake.calls[2][0] == "portfolio_hygiene_review"
 
 
 def test_static_bearer_token_verifier():
@@ -119,19 +129,21 @@ def test_mcp_endpoint_requires_configured_bearer_token(monkeypatch):
 def test_health_distinguishes_liveness_from_readiness(monkeypatch):
     monkeypatch.setattr(settings, "mcp_bearer_token", None)
     monkeypatch.setattr(settings, "mcp_host", "127.0.0.1")
-    app = create_mcp_server(validate_configuration=False).streamable_http_app()
-    monkeypatch.setattr(server_module, "system_readiness", lambda check_connections: {
-        "ok": True,
-        "connections_ok": False,
-        "mode": "recommend_only",
-        "instances": [],
-        "connections": [{"instance": "cloud", "ok": False}],
-        "errors": [],
+    monkeypatch.setattr(server_module.backend, "platform_health", lambda: {"status": "ok", "product": "Pulse"})
+    monkeypatch.setattr(server_module.backend, "platform_readiness", lambda: {
+        "status": "not_ready",
+        "ready": False,
+        "errors": ["connector missing"],
         "warnings": [],
+        "connectors": [],
     })
+    monkeypatch.setattr(server_module.backend, "platform_diagnostics", lambda: {"status": "not_ready", "product": "Pulse"})
+    app = create_mcp_server(validate_configuration=False).streamable_http_app()
     with TestClient(app, base_url="http://127.0.0.1:8080") as client:
+        assert client.get("/health").status_code == 200
+        assert client.get("/ready").status_code == 503
+        assert client.get("/diagnostics").status_code == 503
         assert client.get("/health/live").status_code == 200
-        assert client.get("/health").status_code == 503
 
 
 def test_sprint_report_resolves_story_point_field_before_search(monkeypatch):

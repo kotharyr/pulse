@@ -313,6 +313,9 @@ class JiraClient:
     def update_issue(self, key: str, fields: dict[str, Any]):
         return self.request("PUT", f"/rest/api/{self.platform_api_version}/issue/{key}", json={"fields": fields})
 
+    def update_issue_operations(self, key: str, update: dict[str, Any]):
+        return self.request("PUT", f"/rest/api/{self.platform_api_version}/issue/{key}", json={"update": update})
+
     def create_issue(self, fields: dict[str, Any]):
         return self.request("POST", f"/rest/api/{self.platform_api_version}/issue", json={"fields": fields})
 

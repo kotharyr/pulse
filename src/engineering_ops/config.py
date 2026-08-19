@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
@@ -55,6 +56,12 @@ class JiraInstanceConfig(BaseModel):
     default_project: str | None = None
     quarter_field_name: str = "Target Quarter"
     story_points_field_name: str = "Story Points"
+    team_field_name: str = "Team"
+    pt_field_name: str = "PT"
+    team_pt_field_name: str = "Team/PT"
+    start_date_field_name: str = "Start date"
+    end_date_field_name: str = "End date"
+    hierarchy_field_names: list[str] = Field(default_factory=lambda: ["Parent Link", "Epic Link"])
     default_board_id: int | None = None
     sprint_capacity_points: float | None = None
     sprint_capacity_issue_count: int | None = None
@@ -103,6 +110,17 @@ class JiraInstanceConfig(BaseModel):
         return "3" if self.instance_type == "cloud" else "2"
 
 
+class FiscalQuarterConfig(BaseModel):
+    start: date
+    end: date
+
+    @model_validator(mode="after")
+    def valid_range(self) -> "FiscalQuarterConfig":
+        if self.end < self.start:
+            raise ValueError("fiscal quarter end must be on or after start")
+        return self
+
+
 class ResolvedCredential(BaseModel):
     method: Literal["cloud_api_token", "personal_access_token", "basic_fallback", "legacy"]
     username: str | None = None
@@ -124,6 +142,11 @@ class Settings(BaseSettings):
     bulk_batch_size: int = Field(50, alias="BULK_BATCH_SIZE")
     local_repo_root: str | None = Field(None, alias="LOCAL_REPO_ROOT")
     security_issue_summary_marker: str = Field("Operational Security Issue", alias="SECURITY_ISSUE_SUMMARY_MARKER")
+    fiscal_calendar: dict[str, FiscalQuarterConfig] = Field(default_factory=dict, alias="FISCAL_CALENDAR")
+    fiscal_year_start_month: int = Field(8, alias="FISCAL_YEAR_START_MONTH")
+    fiscal_year_start_day: int = Field(1, alias="FISCAL_YEAR_START_DAY")
+    portfolio_team_options: list[str] = Field(default_factory=lambda: ["Platform Excellence"], alias="PORTFOLIO_TEAM_OPTIONS")
+    portfolio_pt_options: list[str] = Field(default_factory=lambda: ["Muon", "Atlas", "Phoenix", "Dragon"], alias="PORTFOLIO_PT_OPTIONS")
 
     @field_validator("mcp_port")
     @classmethod
@@ -151,6 +174,42 @@ class Settings(BaseSettings):
     def valid_bulk_batch_size(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("BULK_BATCH_SIZE must be greater than zero")
+        return value
+
+    @field_validator("fiscal_calendar", mode="before")
+    @classmethod
+    def parse_fiscal_calendar(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return {}
+            return json.loads(text)
+        return value
+
+    @field_validator("fiscal_year_start_month")
+    @classmethod
+    def valid_fiscal_year_start_month(cls, value: int) -> int:
+        if not 1 <= value <= 12:
+            raise ValueError("FISCAL_YEAR_START_MONTH must be between 1 and 12")
+        return value
+
+    @field_validator("fiscal_year_start_day")
+    @classmethod
+    def valid_fiscal_year_start_day(cls, value: int) -> int:
+        if not 1 <= value <= 31:
+            raise ValueError("FISCAL_YEAR_START_DAY must be between 1 and 31")
+        return value
+
+    @field_validator("portfolio_team_options", "portfolio_pt_options", mode="before")
+    @classmethod
+    def parse_string_list(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            if text.startswith("["):
+                return json.loads(text)
+            return [part.strip() for part in text.split(",") if part.strip()]
         return value
 
     @property
@@ -325,6 +384,18 @@ def configuration_report() -> dict[str, Any]:
         "project_root": str(PROJECT_ROOT),
         "loaded_env_files": LOADED_ENV_FILES,
         "mode": settings.mode,
+        "fiscal_calendar": {
+            name: {"start": cfg.start.isoformat(), "end": cfg.end.isoformat()}
+            for name, cfg in settings.fiscal_calendar.items()
+        },
+        "fiscal_year_start": {
+            "month": settings.fiscal_year_start_month,
+            "day": settings.fiscal_year_start_day,
+        },
+        "portfolio_hygiene": {
+            "team_options": settings.portfolio_team_options,
+            "pt_options": settings.portfolio_pt_options,
+        },
         "mcp": {
             "host": settings.mcp_host,
             "port": settings.mcp_port,

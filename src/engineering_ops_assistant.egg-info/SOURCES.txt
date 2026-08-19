@@ -13,10 +13,14 @@ src/engineering_ops/adapters/jira.py
 src/engineering_ops/console/static/app.js
 src/engineering_ops/console/static/index.html
 src/engineering_ops/console/static/styles.css
+src/engineering_ops/services/audit.py
 src/engineering_ops/services/environment.py
 src/engineering_ops/services/executions.py
 src/engineering_ops/services/fields.py
 src/engineering_ops/services/health.py
+src/engineering_ops/services/orchestration.py
+src/engineering_ops/services/platform.py
+src/engineering_ops/services/portfolio_hygiene.py
 src/engineering_ops/services/repos.py
 src/engineering_ops/services/saved_views.py
 src/engineering_ops/services/security.py
@@ -36,7 +40,10 @@ tests/test_field_resolution.py
 tests/test_jira_adapters.py
 tests/test_mcp_architecture.py
 tests/test_migration.py
+tests/test_orchestration.py
 tests/test_platform_contracts.py
+tests/test_platform_hardening.py
+tests/test_portfolio_hygiene.py
 tests/test_repo_scanning.py
 tests/test_repository_inventory.py
 tests/test_saved_views.py
