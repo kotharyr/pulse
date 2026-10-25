@@ -5,6 +5,9 @@ from typing import Any, Callable, Protocol
 
 from mcp.server.fastmcp import FastMCP
 
+from engineering_ops.auth import protect_http_route
+from engineering_ops.config import settings
+
 
 ToolFunction = Callable[..., Any]
 RouteFunction = Callable[..., Any]
@@ -30,6 +33,10 @@ class CapabilityPlugin:
         for tool in self.tools:
             server.add_tool(tool)
         for path, methods, handler in self.routes:
+            # The console shell and lightweight liveness probes contain no workspace data.
+            public = path in {"/console", "/console/", "/console/{asset}", "/health", "/health/live"}
+            if settings.mcp_bearer_token and not public:
+                handler = protect_http_route(handler, settings.mcp_bearer_token)
             server.custom_route(path, methods=list(methods))(handler)
 
 

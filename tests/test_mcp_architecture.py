@@ -41,7 +41,7 @@ def test_mcp_tool_surface_preserves_public_apply_contracts():
     tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
 
     for name in ("apply_field_updates", "assign_to_quarter", "apply_close_sprint"):
-        assert "preview_id" not in tools[name].inputSchema["properties"]
+        assert "preview_id" in tools[name].inputSchema["properties"]
 
     assert (
         tools["apply_field_updates"].description

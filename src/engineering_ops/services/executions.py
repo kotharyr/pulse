@@ -3,7 +3,9 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from threading import RLock
 from typing import Any
+from uuid import uuid4
 
 
 def _now() -> str:
@@ -42,11 +44,13 @@ class ExecutionHistory:
     """Process-local preview/apply history for console workflows."""
 
     def __init__(self) -> None:
+        self._lock = RLock()
         self._records: dict[str, ExecutionRecord] = {}
         self._order: list[str] = []
 
     def add_preview(self, action: str, instance: str, parameters: dict[str, Any], preview: dict[str, Any]) -> dict[str, Any]:
-        preview_id = preview["preview_id"]
+        # Identity is unique per review; the nested preview id fingerprints source state.
+        preview_id = uuid4().hex
         record = ExecutionRecord(
             preview_id=preview_id,
             action=action,
@@ -54,10 +58,20 @@ class ExecutionHistory:
             parameters=deepcopy(parameters),
             preview=deepcopy(preview),
         )
-        if preview_id not in self._records:
+        with self._lock:
             self._order.append(preview_id)
-        self._records[preview_id] = record
-        return record.to_dict()
+            self._records[preview_id] = record
+            return record.to_dict()
+
+    def begin_apply(self, preview_id: str) -> dict[str, Any]:
+        """Atomically consume a preview before any external write can start."""
+        with self._lock:
+            record = self.get_record(preview_id)
+            if record.status != "previewed":
+                raise ValueError(f"Cannot apply preview in {record.status} status; create and review a new plan")
+            record.status = "applying"
+            record.updated_at = _now()
+            return record.to_dict()
 
     def mark_applied(self, preview_id: str, result: dict[str, Any]) -> dict[str, Any]:
         record = self.get_record(preview_id)
@@ -68,10 +82,13 @@ class ExecutionHistory:
         return record.to_dict()
 
     def mark_rejected(self, preview_id: str) -> dict[str, Any]:
-        record = self.get_record(preview_id)
-        record.status = "rejected"
-        record.updated_at = _now()
-        return record.to_dict()
+        with self._lock:
+            record = self.get_record(preview_id)
+            if record.status in {"applying", "succeeded"}:
+                raise ValueError(f"Cannot reject preview in {record.status} status")
+            record.status = "rejected"
+            record.updated_at = _now()
+            return record.to_dict()
 
     def get_record(self, preview_id: str) -> ExecutionRecord:
         try:

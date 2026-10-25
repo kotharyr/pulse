@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import hmac
+from functools import wraps
+
+from starlette.responses import JSONResponse
 
 from mcp.server.auth.provider import AccessToken
 
@@ -19,3 +22,17 @@ class StaticBearerTokenVerifier:
             client_id="engineering-ops-client",
             scopes=["mcp:tools"],
         )
+
+
+def protect_http_route(handler, expected_token: str):
+    """Apply the configured bearer credential to custom routes as well as MCP."""
+    @wraps(handler)
+    async def authenticated(request):
+        scheme, _, token = request.headers.get("authorization", "").partition(" ")
+        if scheme.casefold() != "bearer" or not hmac.compare_digest(token.encode(), expected_token.encode()):
+            return JSONResponse(
+                {"error": "Authentication required"}, status_code=401,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return await handler(request)
+    return authenticated

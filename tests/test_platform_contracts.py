@@ -38,7 +38,7 @@ def test_field_update_preview_does_not_expose_jira_field_ids():
 
     assert "preview_id" in preview
     assert "customfield_" not in repr(preview)
-    assert preview["issues"][0]["updates"] == [{"field": "Target Quarter", "value": "FY27 Q1"}]
+    assert preview["issues"][0]["updates"] == [{"field": "Target Quarter", "value": "FY27 Q1", "current_value": None}]
 
 
 def test_apply_field_updates_requires_matching_preview_id(monkeypatch):
@@ -100,7 +100,7 @@ def test_apply_close_sprint_requires_matching_preview_id(monkeypatch):
             return [{"id": "customfield_10016", "name": "Story Points"}]
 
         def sprint(self, sprint_id):
-            return {"id": sprint_id}
+            return {"id": sprint_id, "state": "active" if sprint_id == 42 else "future"}
 
         def sprint_issues(self, sprint_id, story_points_field_id=None):
             return []

@@ -5,3 +5,16 @@
 **/__pycache__/
 *.py[cod]
 
+
+# Local environment data and generated artifacts
+.DS_Store
+*.egg-info/
+build/
+dist/
+.coverage*
+htmlcov/
+config/jira_instances.json
+config/environment_cache.json
+config/saved_views.json
+engineering-operations-platform-*.zip
+config/jira_instances.pre-v1.json

@@ -91,8 +91,14 @@ class CloudJiraProvider:
         }
 
     def projects(self, jira: "JiraClient", limit: int) -> Any:
-        data = jira.request("GET", "/rest/api/3/project/search", params={"maxResults": limit})
-        return data.get("values", [])
+        rows = []
+        while len(rows) < limit:
+            data = jira.request("GET", "/rest/api/3/project/search", params={"startAt": len(rows), "maxResults": min(50, limit - len(rows))})
+            batch = data.get("values", [])
+            rows.extend(batch)
+            if not batch or data.get("isLast", len(rows) >= data.get("total", len(rows))):
+                break
+        return rows[:limit]
 
     def search(self, jira: "JiraClient", jql: str, fields: list[str], limit: int) -> list[dict[str, Any]]:
         issues: list[dict[str, Any]] = []
@@ -322,7 +328,7 @@ class JiraClient:
     def description_value(self, text: str) -> Any:
         return self.provider.description_value(text)
 
-    def transition_issue_to_status(self, issue_key: str, status_name: str) -> dict[str, Any]:
+    def resolve_status_transition(self, issue_key: str, status_name: str, *, require_done: bool = False) -> dict[str, Any]:
         data = self.request("GET", f"/rest/api/{self.platform_api_version}/issue/{issue_key}/transitions")
         matches = [
             transition
@@ -332,10 +338,18 @@ class JiraClient:
         if len(matches) != 1:
             names = sorted({((transition.get("to") or {}).get("name") or "") for transition in matches if transition.get("to")})
             raise ValueError(f"Could not resolve transition to {status_name!r} for {issue_key}; matching statuses={names}")
+        transition = matches[0]
+        category = ((transition.get("to") or {}).get("statusCategory") or {}).get("key")
+        if require_done and category != "done":
+            raise ValueError("Split source must transition to a Done status category")
+        return transition
+
+    def transition_issue_to_status(self, issue_key: str, status_name: str) -> dict[str, Any]:
+        transition = self.resolve_status_transition(issue_key, status_name)
         self.request(
             "POST",
             f"/rest/api/{self.platform_api_version}/issue/{issue_key}/transitions",
-            json={"transition": {"id": matches[0]["id"]}},
+            json={"transition": {"id": transition["id"]}},
         )
         return {"issue_key": issue_key, "to_status": status_name}
 
@@ -352,7 +366,11 @@ class JiraClient:
         ]
         if story_points_field_id:
             fields.append(story_points_field_id)
-        return self.search(f"sprint = {sprint_id}", fields, limit)
+        limit = min(limit, settings.max_search_results)
+        rows = self.search(f"sprint = {sprint_id}", fields, limit + 1)
+        if len(rows) > limit:
+            raise JiraError(f"{self.name}: sprint issue count exceeds limit {limit}; refusing an incomplete sprint plan")
+        return rows
 
     def move_issues_to_sprint(self, sprint_id: int, issue_keys: list[str]):
         results = []
@@ -364,11 +382,17 @@ class JiraClient:
         return results
 
     def boards(self, project_key: str | None = None, limit: int = 100):
-        params: dict[str, Any] = {"maxResults": limit}
-        if project_key:
-            params["projectKeyOrId"] = project_key
-        data = self.request("GET", "/rest/agile/1.0/board", params=params)
-        return data.get("values", [])
+        rows = []
+        while len(rows) < limit:
+            params: dict[str, Any] = {"startAt": len(rows), "maxResults": min(50, limit - len(rows))}
+            if project_key:
+                params["projectKeyOrId"] = project_key
+            data = self.request("GET", "/rest/agile/1.0/board", params=params)
+            batch = data.get("values", [])
+            rows.extend(batch)
+            if not batch or data.get("isLast", True):
+                break
+        return rows[:limit]
 
     def board_sprints(self, board_id: int, state: str | None = None, limit: int = 100):
         start = 0

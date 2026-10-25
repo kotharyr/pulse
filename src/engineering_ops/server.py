@@ -196,18 +196,20 @@ def preview_field_updates(instance: str, jql: str, updates: dict[str, Any], limi
     return backend.preview_field_updates(instance, jql, updates, limit)
 
 
-def apply_field_updates(instance: str, jql: str, updates: dict[str, Any], limit: int = 500) -> dict:
+def apply_field_updates(instance: str, jql: str, updates: dict[str, Any], limit: int = 500, preview_id: str | None = None) -> dict:
     """Low-level/advanced apply: apply a previously understood reversible field update. Blocked in recommend_only mode."""
-    preview = backend.preview_field_updates(instance, jql, updates, limit)
-    return backend.apply_field_updates(instance, jql, updates, limit, preview_id=preview["preview_id"])
+    if not preview_id:
+        return {"applied": False, "reason": "preview_id is required; run preview_field_updates and review it first"}
+    return backend.apply_field_updates(instance, jql, updates, limit, preview_id=preview_id)
 
 
-def assign_to_quarter(instance: str, jql: str, quarter: str, dry_run: bool = True, limit: int = 500) -> dict:
+def assign_to_quarter(instance: str, jql: str, quarter: str, dry_run: bool = True, limit: int = 500, preview_id: str | None = None) -> dict:
     """Low-level/advanced apply: assign matching work to a displayed Target Quarter value without requiring field or option IDs."""
     if dry_run:
         return backend.assign_to_quarter(instance, jql, quarter, dry_run=True, limit=limit)
-    preview = backend.assign_to_quarter(instance, jql, quarter, dry_run=True, limit=limit)
-    return backend.assign_to_quarter(instance, jql, quarter, dry_run=False, limit=limit, preview_id=preview["preview_id"])
+    if not preview_id:
+        return {"applied": False, "reason": "preview_id is required; run assign_to_quarter with dry_run=True and review it first"}
+    return backend.assign_to_quarter(instance, jql, quarter, dry_run=False, limit=limit, preview_id=preview_id)
 
 
 def report_quarter_progress(instance: str, quarter: str, jql_extra: str = "", limit: int = 5000) -> dict:
@@ -249,9 +251,11 @@ def apply_close_sprint(
     move_issue_keys: list[str] | None = None,
     split_plans: list[dict[str, Any]] | None = None,
     rollover_all_incomplete: bool = False,
+    preview_id: str | None = None,
 ) -> dict:
     """Low-level/advanced apply: execute an explicitly approved sprint-close plan with explicit sprint ids. Prefer sprint_close_apply with a stored preview id."""
-    preview = backend.preview_close_sprint(instance, sprint_id, next_sprint_id, move_issue_keys, split_plans, rollover_all_incomplete)
+    if not preview_id:
+        return {"applied": False, "reason": "preview_id is required; run preview_close_sprint and review it first"}
     return backend.apply_close_sprint(
         instance,
         sprint_id,
@@ -259,7 +263,7 @@ def apply_close_sprint(
         move_issue_keys,
         split_plans,
         rollover_all_incomplete,
-        preview_id=preview["preview_id"],
+        preview_id=preview_id,
     )
 
 

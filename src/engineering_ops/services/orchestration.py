@@ -173,6 +173,9 @@ class EngineeringOrchestrator:
                 next_sprint_id = match.get("id") if match else None
                 details["next_sprint_name"] = next_sprint_name
 
+        # An explicit name must resolve; never silently close a different sprint.
+        if (sprint_name and not sprint_id) or (next_sprint_name and not next_sprint_id):
+            return int(sprint_id) if sprint_id else None, int(next_sprint_id) if next_sprint_id else None, details
         if not sprint_id or not next_sprint_id:
             discovery = self._safe(
                 local_coverage,
@@ -193,10 +196,8 @@ class EngineeringOrchestrator:
         for sprint in sprints:
             if str(sprint.get("name") or "").casefold() == target:
                 return sprint
-        for sprint in sprints:
-            if target in str(sprint.get("name") or "").casefold():
-                return sprint
-        return None
+        matches = [sprint for sprint in sprints if target in str(sprint.get("name") or "").casefold()]
+        return matches[0] if len(matches) == 1 else None
 
     def sprint_analysis(
         self,
@@ -724,6 +725,12 @@ class EngineeringOrchestrator:
                 recommendations.extend(Recommendation(row["action"], row["rationale"], row.get("priority", "medium")) for row in security.get("recommendations", []))
             if saved_view and "saved_view" in sections_requested:
                 instance_sections["saved_view"] = self.saved_view_review(saved_view, instance=selected_instance, page_size=min(limit, 100))
+            for section_name, result in instance_sections.items():
+                for source in result.get("source_coverage", []):
+                    coverage.append(self._source(
+                        f"{selected_instance}:{section_name}:{source['source']}",
+                        source["status"], source.get("details"), source.get("error"),
+                    ))
             sections["instances"][selected_instance] = instance_sections
 
         if "repositories" in sections_requested:

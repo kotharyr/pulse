@@ -6,6 +6,7 @@ from engineering_ops.backend import EngineeringOpsBackend
 
 class FakeSettings:
     mode = "recommend_only"
+    max_search_results = 5000
     local_repo_path = Path(".")
 
     def jira_instances(self):

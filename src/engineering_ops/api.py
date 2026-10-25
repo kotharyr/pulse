@@ -76,8 +76,11 @@ async def api_issue_search(request: Request) -> JSONResponse:
 
 async def api_sprint_analysis(request: Request) -> JSONResponse:
     instance = request.query_params.get("instance")
-    sprint_id = _int_query(request, "sprint_id")
-    next_sprint_id = _int_query(request, "next_sprint_id")
+    try:
+        sprint_id = _int_query(request, "sprint_id")
+        next_sprint_id = _int_query(request, "next_sprint_id")
+    except ValueError:
+        return _error("sprint_id and next_sprint_id must be integers")
     if not instance or sprint_id is None:
         return _error("instance and sprint_id are required")
     try:
@@ -194,10 +197,10 @@ async def api_repositories(_: Request) -> JSONResponse:
 async def api_security_remediation(request: Request) -> JSONResponse:
     instance = request.query_params.get("instance")
     project = request.query_params.get("project")
-    limit = _int_query(request, "limit", 2000) or 2000
     if not instance:
         return _error("instance is required")
     try:
+        limit = _int_query(request, "limit", 2000) or 2000
         result = await anyio.to_thread.run_sync(lambda: backend.analyze_security_package_updates(instance, project, limit))
         return JSONResponse(result)
     except Exception as exc:
@@ -240,9 +243,12 @@ async def api_execution_reject(request: Request) -> JSONResponse:
 
 
 async def api_execution_history(request: Request) -> JSONResponse:
-    limit = _int_query(request, "limit", 50) or 50
-    result = await anyio.to_thread.run_sync(lambda: backend.execution_history(limit))
-    return JSONResponse(result)
+    try:
+        limit = _int_query(request, "limit", 50) or 50
+        result = await anyio.to_thread.run_sync(lambda: backend.execution_history(limit))
+        return JSONResponse(result)
+    except ValueError:
+        return _error("limit must be an integer")
 
 
 async def api_platform_configuration(request: Request) -> JSONResponse:

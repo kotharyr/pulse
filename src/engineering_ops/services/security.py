@@ -17,10 +17,10 @@ def _clean_component(value: str | None) -> str | None:
 def _version_parts(value: str | None) -> tuple[int, ...] | None:
     if not value:
         return None
-    numbers = re.findall(r"\d+", value)
-    if not numbers:
+    # Constraints, prereleases, vendor tags and digests cannot prove a fixed version.
+    if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", str(value)):
         return None
-    return tuple(int(part) for part in numbers[:4])
+    return tuple(int(part) for part in str(value).split("."))
 
 
 def version_at_least(current: str | None, required: str | None) -> bool | None:
@@ -138,9 +138,9 @@ def normalize_remediation_actions(
             cves=sorted(group["cves"]),
             affected_repositories=affected_repos,
             current_detected_versions=current_versions,
-            already_fixed_repositories=sorted(already_fixed),
+            already_fixed_repositories=sorted(already_fixed - requiring_upgrade - unknown),
             repositories_requiring_upgrade=sorted(requiring_upgrade),
-            unknown_repositories=sorted(unknown - already_fixed - requiring_upgrade),
+            unknown_repositories=sorted(unknown - requiring_upgrade),
             tickets_potentially_cleared=len({issue for issue in group["issues"] if issue}),
             confidence=confidence,
             parsing_rationale=sorted(group["rationale"]),

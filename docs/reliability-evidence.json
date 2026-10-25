@@ -1,0 +1,4724 @@
+{
+  "audit_date": "2026-10-25",
+  "baseline_commit": "73facaa",
+  "baseline_test_count": 79,
+  "final_python_test_count": 147,
+  "final_javascript_test_count": 2,
+  "baseline_coverage": {
+    "covered_lines": 2664,
+    "num_statements": 3531,
+    "percent_covered": 70.93922651933701,
+    "percent_covered_display": "71",
+    "missing_lines": 867,
+    "excluded_lines": 16,
+    "percent_statements_covered": 75.44604927782498,
+    "percent_statements_covered_display": "75",
+    "num_branches": 994,
+    "num_partial_branches": 218,
+    "covered_branches": 546,
+    "missing_branches": 448,
+    "percent_branches_covered": 54.929577464788736,
+    "percent_branches_covered_display": "55"
+  },
+  "final_coverage": {
+    "covered_lines": 2859,
+    "num_statements": 3635,
+    "percent_covered": 74.7379679144385,
+    "percent_covered_display": "75",
+    "missing_lines": 776,
+    "excluded_lines": 16,
+    "percent_statements_covered": 78.65199449793673,
+    "percent_statements_covered_display": "79",
+    "num_branches": 1040,
+    "num_partial_branches": 221,
+    "covered_branches": 635,
+    "missing_branches": 405,
+    "percent_branches_covered": 61.05769230769231,
+    "percent_branches_covered_display": "61"
+  },
+  "coverage_scope": "Python source; browser journeys and live Jira behavior are not measured",
+  "files": {
+    "src/engineering_ops/__init__.py": {
+      "baseline": {
+        "covered_lines": 1,
+        "num_statements": 1,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 0,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "final": {
+        "covered_lines": 1,
+        "num_statements": 1,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 0,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "functions": []
+    },
+    "src/engineering_ops/adapters/jira.py": {
+      "baseline": {
+        "covered_lines": 172,
+        "num_statements": 256,
+        "percent_covered": 62.96296296296296,
+        "percent_covered_display": "63",
+        "missing_lines": 84,
+        "excluded_lines": 10,
+        "percent_statements_covered": 67.1875,
+        "percent_statements_covered_display": "67",
+        "num_branches": 68,
+        "num_partial_branches": 16,
+        "covered_branches": 32,
+        "missing_branches": 36,
+        "percent_branches_covered": 47.05882352941177,
+        "percent_branches_covered_display": "47"
+      },
+      "final": {
+        "covered_lines": 215,
+        "num_statements": 279,
+        "percent_covered": 74.09470752089136,
+        "percent_covered_display": "74",
+        "missing_lines": 64,
+        "excluded_lines": 10,
+        "percent_statements_covered": 77.06093189964157,
+        "percent_statements_covered_display": "77",
+        "num_branches": 80,
+        "num_partial_branches": 11,
+        "covered_branches": 51,
+        "missing_branches": 29,
+        "percent_branches_covered": 63.75,
+        "percent_branches_covered_display": "64"
+      },
+      "functions": [
+        {
+          "function": "JiraError.__init__",
+          "line": 13,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraProviderPlugin.authentication",
+          "line": 35,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [],
+          "status": "no_executable_statements"
+        },
+        {
+          "function": "JiraProviderPlugin.description_value",
+          "line": 37,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [],
+          "status": "no_executable_statements"
+        },
+        {
+          "function": "JiraProviderPlugin.projects",
+          "line": 39,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [],
+          "status": "no_executable_statements"
+        },
+        {
+          "function": "JiraProviderPlugin.search",
+          "line": 41,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [],
+          "status": "no_executable_statements"
+        },
+        {
+          "function": "_authentication",
+          "line": 44,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            55,
+            56
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_single_issue_key_from_jql",
+          "line": 65,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            72
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "CloudJiraProvider.description_value",
+          "line": 81,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "CloudJiraProvider.projects",
+          "line": 93,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "CloudJiraProvider.search",
+          "line": 103,
+          "executed_statement_lines": 16,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "DataCenterJiraProvider.description_value",
+          "line": 132,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "DataCenterJiraProvider.projects",
+          "line": 135,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            136,
+            137
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "DataCenterJiraProvider._search_page",
+          "line": 139,
+          "executed_statement_lines": 12,
+          "missing_statement_lines": [
+            162
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "DataCenterJiraProvider.search",
+          "line": 164,
+          "executed_statement_lines": 16,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "register_jira_provider",
+          "line": 190,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            192
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.__init__",
+          "line": 196,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            197,
+            198,
+            199,
+            200,
+            201,
+            202,
+            203,
+            205
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.platform_api_version",
+          "line": 215,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraClient.close",
+          "line": 218,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            219
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient._request_path_candidates",
+          "line": 221,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraClient._request_once",
+          "line": 233,
+          "executed_statement_lines": 20,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraClient.request",
+          "line": 272,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [
+            282,
+            283,
+            284
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "JiraClient.myself",
+          "line": 286,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            287
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.fields",
+          "line": 289,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            290
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.projects",
+          "line": 292,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            293
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.issue_types",
+          "line": 295,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            296
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.priorities",
+          "line": 298,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            299
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.project_components",
+          "line": 301,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            302
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.project_versions",
+          "line": 304,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            305
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.search",
+          "line": 307,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            308,
+            309,
+            310
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.get_issue",
+          "line": 312,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            313,
+            314
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.editmeta",
+          "line": 316,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            317
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.update_issue",
+          "line": 319,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            320
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.update_issue_operations",
+          "line": 322,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            323
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.create_issue",
+          "line": 325,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            326
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.description_value",
+          "line": 328,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            329
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.resolve_status_transition",
+          "line": 331,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            339,
+            340,
+            344
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "JiraClient.transition_issue_to_status",
+          "line": 347,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraClient.sprint",
+          "line": 356,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            357
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.update_sprint",
+          "line": 359,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            360
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClient.sprint_issues",
+          "line": 362,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraClient.move_issues_to_sprint",
+          "line": 375,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraClient.boards",
+          "line": 384,
+          "executed_statement_lines": 11,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraClient.board_sprints",
+          "line": 397,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            398,
+            399,
+            400,
+            401,
+            402,
+            403,
+            404,
+            405,
+            406,
+            407,
+            408,
+            409,
+            410
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraClientManager.__init__",
+          "line": 416,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraClientManager.get",
+          "line": 420,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            425
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "JiraClientManager.close",
+          "line": 430,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/api.py": {
+      "baseline": {
+        "covered_lines": 257,
+        "num_statements": 350,
+        "percent_covered": 72.6063829787234,
+        "percent_covered_display": "73",
+        "missing_lines": 93,
+        "excluded_lines": 0,
+        "percent_statements_covered": 73.42857142857143,
+        "percent_statements_covered_display": "73",
+        "num_branches": 26,
+        "num_partial_branches": 10,
+        "covered_branches": 16,
+        "missing_branches": 10,
+        "percent_branches_covered": 61.53846153846154,
+        "percent_branches_covered_display": "62"
+      },
+      "final": {
+        "covered_lines": 265,
+        "num_statements": 356,
+        "percent_covered": 73.56020942408377,
+        "percent_covered_display": "74",
+        "missing_lines": 91,
+        "excluded_lines": 0,
+        "percent_statements_covered": 74.43820224719101,
+        "percent_statements_covered_display": "74",
+        "num_branches": 26,
+        "num_partial_branches": 10,
+        "covered_branches": 16,
+        "missing_branches": 10,
+        "percent_branches_covered": 61.53846153846154,
+        "percent_branches_covered_display": "62"
+      },
+      "functions": [
+        {
+          "function": "_error",
+          "line": 17,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_correlation_id",
+          "line": 21,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_json",
+          "line": 25,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_int_query",
+          "line": 32,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_payload",
+          "line": 39,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            42,
+            43
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "console_index",
+          "line": 47,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "console_asset",
+          "line": 51,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            54
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_instances",
+          "line": 58,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_issue_search",
+          "line": 63,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [
+            73,
+            74
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_sprint_analysis",
+          "line": 77,
+          "executed_statement_lines": 10,
+          "missing_statement_lines": [
+            85,
+            89,
+            90
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_sprint_discovery",
+          "line": 93,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            97,
+            101,
+            102
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_environment",
+          "line": 105,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            108,
+            112,
+            113
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_environment_refresh",
+          "line": 116,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [
+            119,
+            120,
+            124,
+            128,
+            129
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_environment_summary",
+          "line": 132,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            137,
+            138
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_saved_views",
+          "line": 141,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_saved_view",
+          "line": 146,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            151,
+            152,
+            153,
+            154
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_saved_view_issues",
+          "line": 157,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            164,
+            165,
+            166,
+            167
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_saved_view_upsert",
+          "line": 170,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            175,
+            176,
+            177,
+            178
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_saved_view_delete",
+          "line": 181,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            186,
+            187,
+            188,
+            189
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_repositories",
+          "line": 192,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_security_remediation",
+          "line": 197,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [
+            201
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_execution_preview",
+          "line": 210,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            217,
+            218,
+            219,
+            220
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_execution_apply",
+          "line": 223,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            228,
+            229,
+            230,
+            231
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_execution_reject",
+          "line": 234,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            239,
+            240,
+            241,
+            242
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_execution_history",
+          "line": 245,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_platform_configuration",
+          "line": 254,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_platform_connectors",
+          "line": 259,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_platform_audit",
+          "line": 264,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_platform_metrics",
+          "line": 270,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_platform_diagnostics",
+          "line": 275,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_orchestration_engineering_review",
+          "line": 280,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            285,
+            286
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_orchestration_sprint_analysis",
+          "line": 289,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            294,
+            295
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_orchestration_sprint_close_preview",
+          "line": 298,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            303,
+            304
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_orchestration_sprint_close_apply",
+          "line": 307,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            315,
+            316,
+            317,
+            318
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_orchestration_portfolio_review",
+          "line": 321,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            326,
+            327
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_orchestration_backlog_review",
+          "line": 330,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            335,
+            336
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_orchestration_security_remediation",
+          "line": 339,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            344,
+            345
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_orchestration_saved_view_review",
+          "line": 348,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            352,
+            356,
+            357,
+            358,
+            359
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_hygiene_query_payload",
+          "line": 362,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "api_hygiene_context",
+          "line": 375,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            381,
+            382
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_hygiene_review_get",
+          "line": 385,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            390,
+            391
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_hygiene_review_post",
+          "line": 394,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            400,
+            401
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_hygiene_preview",
+          "line": 404,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            410,
+            411
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_hygiene_apply",
+          "line": 414,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            418,
+            424,
+            425,
+            426,
+            427
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_hygiene_findings",
+          "line": 430,
+          "executed_statement_lines": 13,
+          "missing_statement_lines": [
+            440,
+            442,
+            443,
+            459,
+            460
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "api_hygiene_issue",
+          "line": 463,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            477,
+            478
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "console_routes",
+          "line": 481,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/auth.py": {
+      "baseline": {
+        "covered_lines": 10,
+        "num_statements": 10,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 2,
+        "num_partial_branches": 0,
+        "covered_branches": 2,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "final": {
+        "covered_lines": 20,
+        "num_statements": 20,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 4,
+        "num_partial_branches": 0,
+        "covered_branches": 4,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "functions": [
+        {
+          "function": "StaticBearerTokenVerifier.__init__",
+          "line": 14,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "StaticBearerTokenVerifier.verify_token",
+          "line": 17,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "protect_http_route",
+          "line": 27,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/backend.py": {
+      "baseline": {
+        "covered_lines": 378,
+        "num_statements": 631,
+        "percent_covered": 54.48954489544895,
+        "percent_covered_display": "54",
+        "missing_lines": 253,
+        "excluded_lines": 0,
+        "percent_statements_covered": 59.90491283676704,
+        "percent_statements_covered_display": "60",
+        "num_branches": 182,
+        "num_partial_branches": 31,
+        "covered_branches": 65,
+        "missing_branches": 117,
+        "percent_branches_covered": 35.714285714285715,
+        "percent_branches_covered_display": "36"
+      },
+      "final": {
+        "covered_lines": 433,
+        "num_statements": 666,
+        "percent_covered": 61.175115207373274,
+        "percent_covered_display": "61",
+        "missing_lines": 233,
+        "excluded_lines": 0,
+        "percent_statements_covered": 65.01501501501501,
+        "percent_statements_covered_display": "65",
+        "num_branches": 202,
+        "num_partial_branches": 34,
+        "covered_branches": 98,
+        "missing_branches": 104,
+        "percent_branches_covered": 48.51485148514851,
+        "percent_branches_covered_display": "49"
+      },
+      "functions": [
+        {
+          "function": "_parse_jira_datetime",
+          "line": 43,
+          "executed_statement_lines": 10,
+          "missing_statement_lines": [
+            48,
+            51,
+            52,
+            55,
+            56,
+            58
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_sprint_sequence_number",
+          "line": 62,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_sprint_sort_key",
+          "line": 69,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_text_from_adf",
+          "line": 84,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            85,
+            86,
+            87,
+            88,
+            89,
+            90,
+            91,
+            92,
+            93,
+            94,
+            95,
+            96
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_preview_payload",
+          "line": 99,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_preview_id",
+          "line": 103,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_with_preview_id",
+          "line": 108,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_sanitize_issue",
+          "line": 112,
+          "executed_statement_lines": 11,
+          "missing_statement_lines": [
+            120
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.client",
+          "line": 140,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.orchestrator",
+          "line": 143,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            144
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.platform",
+          "line": 146,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.portfolio_hygiene_service",
+          "line": 149,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            150
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend._story_points_field",
+          "line": 152,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend._recent_capacity_samples",
+          "line": 156,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            164,
+            165,
+            166,
+            167,
+            168,
+            169,
+            170,
+            171,
+            172,
+            177
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend._derive_capacity",
+          "line": 179,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            189,
+            190,
+            191,
+            192,
+            193,
+            194,
+            199,
+            200,
+            201
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.system_readiness",
+          "line": 207,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            209,
+            210,
+            211,
+            212,
+            213,
+            214,
+            215,
+            220,
+            221,
+            222,
+            223,
+            224
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.platform_health",
+          "line": 226,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            228
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.platform_readiness",
+          "line": 230,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            232
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.platform_diagnostics",
+          "line": 234,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.platform_configuration",
+          "line": 239,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            241,
+            242
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.connector_status",
+          "line": 244,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            246,
+            247
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.system_metrics",
+          "line": 249,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            251
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.audit_events",
+          "line": 253,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.list_jira_instances",
+          "line": 257,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            259
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.test_jira_connection",
+          "line": 266,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            268,
+            269
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.discover_jira_environment",
+          "line": 276,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            284,
+            285,
+            286,
+            287,
+            288,
+            289
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.discover_console_sprints",
+          "line": 299,
+          "executed_statement_lines": 39,
+          "missing_statement_lines": [
+            305,
+            306,
+            307,
+            308,
+            309,
+            310,
+            311,
+            312,
+            313,
+            376,
+            377
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend._environment_model",
+          "line": 394,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.discover_environment",
+          "line": 401,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.refresh_environment",
+          "line": 411,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.get_environment_summary",
+          "line": 421,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            423,
+            424,
+            425,
+            426,
+            427,
+            428,
+            429,
+            430,
+            431,
+            444
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.find_project_by_name",
+          "line": 446,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.find_board_by_name",
+          "line": 452,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.find_sprint_by_name",
+          "line": 458,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.resolve_field_name",
+          "line": 464,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.resolve_field_value",
+          "line": 471,
+          "executed_statement_lines": 16,
+          "missing_statement_lines": [
+            486,
+            487,
+            488,
+            489
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend._saved_view_defaults_context",
+          "line": 505,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            508
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.list_saved_views",
+          "line": 512,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.get_saved_view",
+          "line": 517,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.save_operational_view",
+          "line": 522,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.delete_operational_view",
+          "line": 528,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.search_saved_view",
+          "line": 534,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.search_issues",
+          "line": 539,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            541,
+            546
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.search_issues_page",
+          "line": 548,
+          "executed_statement_lines": 10,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend._build_field_update_preview",
+          "line": 580,
+          "executed_statement_lines": 26,
+          "missing_statement_lines": [
+            594,
+            595,
+            606,
+            613,
+            614
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.preview_field_updates",
+          "line": 634,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.apply_field_updates",
+          "line": 639,
+          "executed_statement_lines": 15,
+          "missing_statement_lines": [
+            656,
+            664,
+            665
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.assign_to_quarter",
+          "line": 668,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            678,
+            679,
+            680,
+            681
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.report_quarter_progress",
+          "line": 683,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            685,
+            686,
+            687,
+            688,
+            689,
+            690,
+            691,
+            692,
+            693,
+            694,
+            695,
+            696,
+            697,
+            698,
+            699,
+            700,
+            701
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.report_sprint_progress",
+          "line": 713,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.analyze_current_sprint",
+          "line": 731,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            738,
+            739,
+            740,
+            741,
+            742,
+            743,
+            744,
+            749,
+            750,
+            751,
+            752,
+            753,
+            754,
+            755,
+            756,
+            757
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.analyze_next_sprint_capacity",
+          "line": 780,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            788,
+            789,
+            790,
+            791,
+            792,
+            793,
+            794,
+            795,
+            796,
+            797,
+            798,
+            799,
+            800,
+            809
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.preview_close_sprint",
+          "line": 811,
+          "executed_statement_lines": 62,
+          "missing_statement_lines": [
+            856,
+            862,
+            863,
+            864,
+            884,
+            886,
+            910
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.apply_close_sprint",
+          "line": 928,
+          "executed_statement_lines": 16,
+          "missing_statement_lines": [
+            941,
+            945,
+            954,
+            955,
+            956,
+            957,
+            958,
+            967,
+            968,
+            969,
+            970,
+            971,
+            972,
+            973,
+            974,
+            975,
+            976,
+            977,
+            978
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.create_execution_preview",
+          "line": 994,
+          "executed_statement_lines": 11,
+          "missing_statement_lines": [
+            999,
+            1008,
+            1024,
+            1025,
+            1035,
+            1037
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.apply_execution_preview",
+          "line": 1047,
+          "executed_statement_lines": 19,
+          "missing_statement_lines": [
+            1051,
+            1052,
+            1068,
+            1087
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOpsBackend.reject_execution_preview",
+          "line": 1100,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.execution_history",
+          "line": 1111,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.list_local_repositories",
+          "line": 1115,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1117,
+            1118,
+            1119,
+            1120
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.scan_repository_packages",
+          "line": 1122,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1124,
+            1125,
+            1126,
+            1127,
+            1128
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.repository_inventory",
+          "line": 1130,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1132,
+            1133,
+            1134,
+            1135,
+            1136
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.analyze_security_package_updates",
+          "line": 1145,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1147,
+            1148,
+            1149,
+            1150,
+            1155,
+            1160,
+            1161,
+            1162,
+            1163,
+            1164,
+            1165,
+            1166,
+            1167,
+            1183
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.engineering_health",
+          "line": 1192,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1194,
+            1199
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.engineering_review",
+          "line": 1201,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1213
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.sprint_analysis",
+          "line": 1224,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1236
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.sprint_close_preview_workflow",
+          "line": 1247,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1260
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.sprint_close_apply_workflow",
+          "line": 1272,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1274
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.portfolio_review",
+          "line": 1276,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1286
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.backlog_review",
+          "line": 1295,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1304
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.security_remediation_analysis",
+          "line": 1312,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1319
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.saved_view_review",
+          "line": 1321,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1330
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.portfolio_hygiene_context",
+          "line": 1338,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1340
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.portfolio_hygiene_review",
+          "line": 1342,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1353
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.portfolio_hygiene_preview_fix",
+          "line": 1363,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1377
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOpsBackend.portfolio_hygiene_apply",
+          "line": 1390,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            1392
+          ],
+          "status": "not_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/config.py": {
+      "baseline": {
+        "covered_lines": 227,
+        "num_statements": 271,
+        "percent_covered": 78.87323943661971,
+        "percent_covered_display": "79",
+        "missing_lines": 44,
+        "excluded_lines": 0,
+        "percent_statements_covered": 83.76383763837639,
+        "percent_statements_covered_display": "84",
+        "num_branches": 84,
+        "num_partial_branches": 31,
+        "covered_branches": 53,
+        "missing_branches": 31,
+        "percent_branches_covered": 63.095238095238095,
+        "percent_branches_covered_display": "63"
+      },
+      "final": {
+        "covered_lines": 227,
+        "num_statements": 271,
+        "percent_covered": 78.87323943661971,
+        "percent_covered_display": "79",
+        "missing_lines": 44,
+        "excluded_lines": 0,
+        "percent_statements_covered": 83.76383763837639,
+        "percent_statements_covered_display": "84",
+        "num_branches": 84,
+        "num_partial_branches": 31,
+        "covered_branches": 53,
+        "missing_branches": 31,
+        "percent_branches_covered": 63.095238095238095,
+        "percent_branches_covered_display": "63"
+      },
+      "functions": [
+        {
+          "function": "_load_project_environment",
+          "line": 19,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [
+            35,
+            36
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "JiraInstanceConfig.migrate_legacy_shape",
+          "line": 80,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraInstanceConfig.clean",
+          "line": 87,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [
+            90,
+            92,
+            94,
+            96
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "JiraInstanceConfig.kind",
+          "line": 103,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            105
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "JiraInstanceConfig.api_version",
+          "line": 108,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "FiscalQuarterConfig.valid_range",
+          "line": 118,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            120
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.valid_port",
+          "line": 153,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            155
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.positive_timeout",
+          "line": 160,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            162
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.positive_search_limit",
+          "line": 167,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            169
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.valid_bulk_batch_size",
+          "line": 174,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            176
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.parse_fiscal_calendar",
+          "line": 181,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            185
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.valid_fiscal_year_start_month",
+          "line": 191,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            193
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.valid_fiscal_year_start_day",
+          "line": 198,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            200
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.parse_string_list",
+          "line": 205,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            209,
+            211
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.jira_instances_path",
+          "line": 216,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "Settings.local_repo_path",
+          "line": 221,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            224
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Settings.jira_instances",
+          "line": 226,
+          "executed_statement_lines": 11,
+          "missing_statement_lines": [
+            229,
+            232,
+            233,
+            235,
+            240
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_credential_prefix",
+          "line": 248,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            251
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_required",
+          "line": 255,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            258
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "resolve_credentials",
+          "line": 262,
+          "executed_statement_lines": 15,
+          "missing_statement_lines": [
+            275,
+            276,
+            277,
+            316
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "configuration_report",
+          "line": 322,
+          "executed_statement_lines": 28,
+          "missing_statement_lines": [
+            328,
+            329,
+            330,
+            339,
+            340,
+            341,
+            342,
+            343,
+            344,
+            347,
+            349,
+            364,
+            366
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "validate_startup_configuration",
+          "line": 412,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            415,
+            416
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/models.py": {
+      "baseline": {
+        "covered_lines": 172,
+        "num_statements": 180,
+        "percent_covered": 94.08602150537635,
+        "percent_covered_display": "94",
+        "missing_lines": 8,
+        "excluded_lines": 0,
+        "percent_statements_covered": 95.55555555555556,
+        "percent_statements_covered_display": "96",
+        "num_branches": 6,
+        "num_partial_branches": 3,
+        "covered_branches": 3,
+        "missing_branches": 3,
+        "percent_branches_covered": 50.0,
+        "percent_branches_covered_display": "50"
+      },
+      "final": {
+        "covered_lines": 172,
+        "num_statements": 180,
+        "percent_covered": 94.08602150537635,
+        "percent_covered_display": "94",
+        "missing_lines": 8,
+        "excluded_lines": 0,
+        "percent_statements_covered": 95.55555555555556,
+        "percent_statements_covered_display": "96",
+        "num_branches": 6,
+        "num_partial_branches": 3,
+        "covered_branches": 3,
+        "missing_branches": 3,
+        "percent_branches_covered": 50.0,
+        "percent_branches_covered_display": "50"
+      },
+      "functions": [
+        {
+          "function": "_drop_none",
+          "line": 7,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "JiraInstance.to_dict",
+          "line": 18,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            19
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "Project.to_dict",
+          "line": 28,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            31
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Board.to_dict",
+          "line": 42,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            45
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Sprint.to_dict",
+          "line": 59,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            68,
+            69
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "Repository.to_dict",
+          "line": 84,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "Package.to_dict",
+          "line": 96,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            97
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "SecurityFinding.to_dict",
+          "line": 112,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            113
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "RemediationAction.to_dict",
+          "line": 132,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "SavedView.id",
+          "line": 147,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "SavedView.to_dict",
+          "line": 150,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ExecutionPreview.to_dict",
+          "line": 163,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            164
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "Finding.to_dict",
+          "line": 175,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "Risk.to_dict",
+          "line": 186,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "Recommendation.to_dict",
+          "line": 198,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "Metric.to_dict",
+          "line": 208,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "Confidence.to_dict",
+          "line": 218,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "SourceCoverage.to_dict",
+          "line": 229,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ExecutionPreviewReference.to_dict",
+          "line": 240,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/plugins.py": {
+      "baseline": {
+        "covered_lines": 30,
+        "num_statements": 31,
+        "percent_covered": 94.87179487179488,
+        "percent_covered_display": "95",
+        "missing_lines": 1,
+        "excluded_lines": 4,
+        "percent_statements_covered": 96.7741935483871,
+        "percent_statements_covered_display": "97",
+        "num_branches": 8,
+        "num_partial_branches": 1,
+        "covered_branches": 7,
+        "missing_branches": 1,
+        "percent_branches_covered": 87.5,
+        "percent_branches_covered_display": "88"
+      },
+      "final": {
+        "covered_lines": 35,
+        "num_statements": 36,
+        "percent_covered": 95.65217391304348,
+        "percent_covered_display": "96",
+        "missing_lines": 1,
+        "excluded_lines": 4,
+        "percent_statements_covered": 97.22222222222223,
+        "percent_statements_covered_display": "97",
+        "num_branches": 10,
+        "num_partial_branches": 1,
+        "covered_branches": 9,
+        "missing_branches": 1,
+        "percent_branches_covered": 90.0,
+        "percent_branches_covered_display": "90"
+      },
+      "functions": [
+        {
+          "function": "MCPPlugin.register",
+          "line": 21,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [],
+          "status": "no_executable_statements"
+        },
+        {
+          "function": "CapabilityPlugin.register",
+          "line": 32,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PluginRegistry.add",
+          "line": 49,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            51
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PluginRegistry.install",
+          "line": 54,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PluginRegistry.names",
+          "line": 59,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/runtime.py": {
+      "baseline": {
+        "covered_lines": 7,
+        "num_statements": 11,
+        "percent_covered": 53.84615384615385,
+        "percent_covered_display": "54",
+        "missing_lines": 4,
+        "excluded_lines": 0,
+        "percent_statements_covered": 63.63636363636363,
+        "percent_statements_covered_display": "64",
+        "num_branches": 2,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 2,
+        "percent_branches_covered": 0.0,
+        "percent_branches_covered_display": "0"
+      },
+      "final": {
+        "covered_lines": 7,
+        "num_statements": 11,
+        "percent_covered": 53.84615384615385,
+        "percent_covered_display": "54",
+        "missing_lines": 4,
+        "excluded_lines": 0,
+        "percent_statements_covered": 63.63636363636363,
+        "percent_statements_covered_display": "64",
+        "num_branches": 2,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 2,
+        "percent_branches_covered": 0.0,
+        "percent_branches_covered_display": "0"
+      },
+      "functions": [
+        {
+          "function": "client",
+          "line": 10,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            11,
+            12,
+            13,
+            14
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "close_clients",
+          "line": 17,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/server.py": {
+      "baseline": {
+        "covered_lines": 113,
+        "num_statements": 140,
+        "percent_covered": 79.72972972972973,
+        "percent_covered_display": "80",
+        "missing_lines": 27,
+        "excluded_lines": 0,
+        "percent_statements_covered": 80.71428571428571,
+        "percent_statements_covered_display": "81",
+        "num_branches": 8,
+        "num_partial_branches": 1,
+        "covered_branches": 5,
+        "missing_branches": 3,
+        "percent_branches_covered": 62.5,
+        "percent_branches_covered_display": "62"
+      },
+      "final": {
+        "covered_lines": 120,
+        "num_statements": 143,
+        "percent_covered": 82.1656050955414,
+        "percent_covered_display": "82",
+        "missing_lines": 23,
+        "excluded_lines": 0,
+        "percent_statements_covered": 83.91608391608392,
+        "percent_statements_covered_display": "84",
+        "num_branches": 14,
+        "num_partial_branches": 5,
+        "covered_branches": 9,
+        "missing_branches": 5,
+        "percent_branches_covered": 64.28571428571429,
+        "percent_branches_covered_display": "64"
+      },
+      "functions": [
+        {
+          "function": "engineering_review",
+          "line": 54,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "sprint_analysis",
+          "line": 68,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            79
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "sprint_close_preview",
+          "line": 82,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            94
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "sprint_close_apply",
+          "line": 107,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "portfolio_review",
+          "line": 112,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            121
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "backlog_review",
+          "line": 124,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            132
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "security_remediation_analysis",
+          "line": 135,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            141
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "saved_view_review",
+          "line": 144,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            152
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "portfolio_hygiene_review",
+          "line": 155,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "portfolio_hygiene_preview_fix",
+          "line": 168,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            181
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "portfolio_hygiene_apply",
+          "line": 184,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            186
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "search_issues",
+          "line": 189,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            191
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "preview_field_updates",
+          "line": 194,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            196
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "apply_field_updates",
+          "line": 199,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            203
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "assign_to_quarter",
+          "line": 206,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            209,
+            212
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "report_quarter_progress",
+          "line": 215,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            217
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "report_sprint_progress",
+          "line": 220,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "analyze_next_sprint_capacity",
+          "line": 225,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            232
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "preview_close_sprint",
+          "line": 235,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            244
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "apply_close_sprint",
+          "line": 247,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            259
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "analyze_security_package_updates",
+          "line": 270,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            272
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "engineering_health",
+          "line": 275,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            277
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "health",
+          "line": 280,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ready",
+          "line": 285,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "diagnostics",
+          "line": 290,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "liveness",
+          "line": 295,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_log_startup_report",
+          "line": 299,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "build_plugin_registry",
+          "line": 316,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "create_mcp_server",
+          "line": 386,
+          "executed_statement_lines": 16,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "run",
+          "line": 424,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            425,
+            426,
+            428
+          ],
+          "status": "not_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/services/audit.py": {
+      "baseline": {
+        "covered_lines": 34,
+        "num_statements": 34,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 0,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "final": {
+        "covered_lines": 34,
+        "num_statements": 34,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 0,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "functions": [
+        {
+          "function": "now_iso",
+          "line": 9,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "AuditEvent.to_dict",
+          "line": 24,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "AuditTrail.__init__",
+          "line": 41,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "AuditTrail.record",
+          "line": 45,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "AuditTrail.list",
+          "line": 68,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "AuditTrail.count",
+          "line": 72,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/services/environment.py": {
+      "baseline": {
+        "covered_lines": 148,
+        "num_statements": 168,
+        "percent_covered": 84.21052631578948,
+        "percent_covered_display": "84",
+        "missing_lines": 20,
+        "excluded_lines": 0,
+        "percent_statements_covered": 88.0952380952381,
+        "percent_statements_covered_display": "88",
+        "num_branches": 60,
+        "num_partial_branches": 14,
+        "covered_branches": 44,
+        "missing_branches": 16,
+        "percent_branches_covered": 73.33333333333333,
+        "percent_branches_covered_display": "73"
+      },
+      "final": {
+        "covered_lines": 148,
+        "num_statements": 168,
+        "percent_covered": 84.21052631578948,
+        "percent_covered_display": "84",
+        "missing_lines": 20,
+        "excluded_lines": 0,
+        "percent_statements_covered": 88.0952380952381,
+        "percent_statements_covered_display": "88",
+        "num_branches": 60,
+        "num_partial_branches": 14,
+        "covered_branches": 44,
+        "missing_branches": 16,
+        "percent_branches_covered": 73.33333333333333,
+        "percent_branches_covered_display": "73"
+      },
+      "functions": [
+        {
+          "function": "now_iso",
+          "line": 18,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_age_seconds",
+          "line": 22,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            24,
+            28,
+            29
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_display_values",
+          "line": 33,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            35,
+            37,
+            38,
+            39,
+            40,
+            45,
+            46,
+            47
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_dedupe",
+          "line": 50,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_field_schema_type",
+          "line": 61,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_is_select_field",
+          "line": 66,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_public_field",
+          "line": 71,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "public_environment",
+          "line": 82,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EnvironmentCache._read",
+          "line": 115,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            120,
+            121,
+            123
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EnvironmentCache._write",
+          "line": 127,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EnvironmentCache.get",
+          "line": 131,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EnvironmentCache.put",
+          "line": 134,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EnvironmentCache.all",
+          "line": 140,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "discover_environment_model",
+          "line": 144,
+          "executed_statement_lines": 56,
+          "missing_statement_lines": [
+            150,
+            151,
+            152,
+            203,
+            229
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "with_cache_age",
+          "line": 282,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "find_by_name",
+          "line": 286,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [
+            296
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/services/executions.py": {
+      "baseline": {
+        "covered_lines": 50,
+        "num_statements": 52,
+        "percent_covered": 94.44444444444444,
+        "percent_covered_display": "94",
+        "missing_lines": 2,
+        "excluded_lines": 0,
+        "percent_statements_covered": 96.15384615384616,
+        "percent_statements_covered_display": "96",
+        "num_branches": 2,
+        "num_partial_branches": 1,
+        "covered_branches": 1,
+        "missing_branches": 1,
+        "percent_branches_covered": 50.0,
+        "percent_branches_covered_display": "50"
+      },
+      "final": {
+        "covered_lines": 63,
+        "num_statements": 66,
+        "percent_covered": 94.28571428571429,
+        "percent_covered_display": "94",
+        "missing_lines": 3,
+        "excluded_lines": 0,
+        "percent_statements_covered": 95.45454545454545,
+        "percent_statements_covered_display": "95",
+        "num_branches": 4,
+        "num_partial_branches": 1,
+        "covered_branches": 3,
+        "missing_branches": 1,
+        "percent_branches_covered": 75.0,
+        "percent_branches_covered_display": "75"
+      },
+      "functions": [
+        {
+          "function": "_now",
+          "line": 11,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ExecutionRecord.to_dict",
+          "line": 28,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ExecutionHistory.__init__",
+          "line": 46,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ExecutionHistory.add_preview",
+          "line": 51,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ExecutionHistory.begin_apply",
+          "line": 66,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ExecutionHistory.mark_applied",
+          "line": 76,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ExecutionHistory.mark_rejected",
+          "line": 84,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            88
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "ExecutionHistory.get_record",
+          "line": 93,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            96,
+            97
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "ExecutionHistory.list",
+          "line": 99,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/services/fields.py": {
+      "baseline": {
+        "covered_lines": 21,
+        "num_statements": 29,
+        "percent_covered": 62.7906976744186,
+        "percent_covered_display": "63",
+        "missing_lines": 8,
+        "excluded_lines": 0,
+        "percent_statements_covered": 72.41379310344827,
+        "percent_statements_covered_display": "72",
+        "num_branches": 14,
+        "num_partial_branches": 6,
+        "covered_branches": 6,
+        "missing_branches": 8,
+        "percent_branches_covered": 42.857142857142854,
+        "percent_branches_covered_display": "43"
+      },
+      "final": {
+        "covered_lines": 21,
+        "num_statements": 29,
+        "percent_covered": 62.7906976744186,
+        "percent_covered_display": "63",
+        "missing_lines": 8,
+        "excluded_lines": 0,
+        "percent_statements_covered": 72.41379310344827,
+        "percent_statements_covered_display": "72",
+        "num_branches": 14,
+        "num_partial_branches": 6,
+        "covered_branches": 6,
+        "missing_branches": 8,
+        "percent_branches_covered": 42.857142857142854,
+        "percent_branches_covered_display": "43"
+      },
+      "functions": [
+        {
+          "function": "resolve_field",
+          "line": 12,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            15,
+            17
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "resolve_value_for_issue",
+          "line": 21,
+          "executed_statement_lines": 10,
+          "missing_statement_lines": [
+            25,
+            34,
+            38,
+            39,
+            40,
+            41
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/services/health.py": {
+      "baseline": {
+        "covered_lines": 6,
+        "num_statements": 35,
+        "percent_covered": 12.244897959183673,
+        "percent_covered_display": "12",
+        "missing_lines": 29,
+        "excluded_lines": 0,
+        "percent_statements_covered": 17.142857142857142,
+        "percent_statements_covered_display": "17",
+        "num_branches": 14,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 14,
+        "percent_branches_covered": 0.0,
+        "percent_branches_covered_display": "0"
+      },
+      "final": {
+        "covered_lines": 33,
+        "num_statements": 36,
+        "percent_covered": 86.0,
+        "percent_covered_display": "86",
+        "missing_lines": 3,
+        "excluded_lines": 0,
+        "percent_statements_covered": 91.66666666666667,
+        "percent_statements_covered_display": "92",
+        "num_branches": 14,
+        "num_partial_branches": 2,
+        "covered_branches": 10,
+        "missing_branches": 4,
+        "percent_branches_covered": 71.42857142857143,
+        "percent_branches_covered_display": "71"
+      },
+      "functions": [
+        {
+          "function": "_date",
+          "line": 8,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            10
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "engineering_health",
+          "line": 18,
+          "executed_statement_lines": 21,
+          "missing_statement_lines": [
+            31,
+            32
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/services/orchestration.py": {
+      "baseline": {
+        "covered_lines": 177,
+        "num_statements": 272,
+        "percent_covered": 57.25806451612903,
+        "percent_covered_display": "57",
+        "missing_lines": 95,
+        "excluded_lines": 0,
+        "percent_statements_covered": 65.07352941176471,
+        "percent_statements_covered_display": "65",
+        "num_branches": 100,
+        "num_partial_branches": 22,
+        "covered_branches": 36,
+        "missing_branches": 64,
+        "percent_branches_covered": 36.0,
+        "percent_branches_covered_display": "36"
+      },
+      "final": {
+        "covered_lines": 195,
+        "num_statements": 275,
+        "percent_covered": 64.9867374005305,
+        "percent_covered_display": "65",
+        "missing_lines": 80,
+        "excluded_lines": 0,
+        "percent_statements_covered": 70.9090909090909,
+        "percent_statements_covered_display": "71",
+        "num_branches": 102,
+        "num_partial_branches": 22,
+        "covered_branches": 50,
+        "missing_branches": 52,
+        "percent_branches_covered": 49.01960784313726,
+        "percent_branches_covered_display": "49"
+      },
+      "functions": [
+        {
+          "function": "_as_list",
+          "line": 20,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_number",
+          "line": 28,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            31,
+            32
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_quote_jql",
+          "line": 35,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_bounded_jql",
+          "line": 44,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_completion_from_analysis",
+          "line": 54,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator.__init__",
+          "line": 71,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator.mode",
+          "line": 75,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator._response",
+          "line": 79,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator._confidence",
+          "line": 111,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            113
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOrchestrator._source",
+          "line": 121,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator._safe",
+          "line": 124,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator._instance_names",
+          "line": 133,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            137,
+            138,
+            139,
+            140,
+            141
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOrchestrator._resolve_sprint_ids",
+          "line": 143,
+          "executed_statement_lines": 22,
+          "missing_statement_lines": [
+            172,
+            173,
+            174
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOrchestrator._match_named_sprint",
+          "line": 194,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            198
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOrchestrator.sprint_analysis",
+          "line": 202,
+          "executed_statement_lines": 28,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator.sprint_close_preview",
+          "line": 316,
+          "executed_statement_lines": 16,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator.sprint_close_apply",
+          "line": 435,
+          "executed_statement_lines": 11,
+          "missing_statement_lines": [
+            438
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOrchestrator.security_remediation_analysis",
+          "line": 464,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator.saved_view_review",
+          "line": 510,
+          "executed_statement_lines": 10,
+          "missing_statement_lines": [
+            522,
+            531,
+            547
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "EngineeringOrchestrator.backlog_review",
+          "line": 560,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            569,
+            570,
+            571,
+            572,
+            573,
+            574,
+            575,
+            576,
+            577,
+            578,
+            583,
+            588,
+            589,
+            590,
+            591,
+            592,
+            593,
+            594,
+            595
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator.portfolio_review",
+          "line": 624,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            634,
+            635,
+            636,
+            637,
+            638,
+            639,
+            640,
+            641,
+            642,
+            648,
+            649,
+            650,
+            652,
+            653,
+            654,
+            655,
+            656,
+            657,
+            658,
+            659,
+            660,
+            661,
+            662,
+            663,
+            664,
+            665,
+            666,
+            667
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "EngineeringOrchestrator.engineering_review",
+          "line": 690,
+          "executed_statement_lines": 33,
+          "missing_statement_lines": [
+            719,
+            721,
+            727,
+            743
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/services/platform.py": {
+      "baseline": {
+        "covered_lines": 48,
+        "num_statements": 51,
+        "percent_covered": 94.33962264150944,
+        "percent_covered_display": "94",
+        "missing_lines": 3,
+        "excluded_lines": 0,
+        "percent_statements_covered": 94.11764705882354,
+        "percent_statements_covered_display": "94",
+        "num_branches": 2,
+        "num_partial_branches": 0,
+        "covered_branches": 2,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "final": {
+        "covered_lines": 48,
+        "num_statements": 51,
+        "percent_covered": 94.33962264150944,
+        "percent_covered_display": "94",
+        "missing_lines": 3,
+        "excluded_lines": 0,
+        "percent_statements_covered": 94.11764705882354,
+        "percent_statements_covered_display": "94",
+        "num_branches": 2,
+        "num_partial_branches": 0,
+        "covered_branches": 2,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "functions": [
+        {
+          "function": "now_iso",
+          "line": 11,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.__init__",
+          "line": 18,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.health",
+          "line": 22,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            23
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.readiness",
+          "line": 31,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.configuration_summary",
+          "line": 43,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.connector_status",
+          "line": 61,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.diagnostics",
+          "line": 91,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.system_metrics",
+          "line": 104,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.scheduler_status",
+          "line": 123,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics.role_model",
+          "line": 136,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PlatformDiagnostics._pid",
+          "line": 144,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            149,
+            150
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/services/portfolio_hygiene.py": {
+      "baseline": {
+        "covered_lines": 347,
+        "num_statements": 429,
+        "percent_covered": 76.6497461928934,
+        "percent_covered_display": "77",
+        "missing_lines": 82,
+        "excluded_lines": 0,
+        "percent_statements_covered": 80.88578088578089,
+        "percent_statements_covered_display": "81",
+        "num_branches": 162,
+        "num_partial_branches": 38,
+        "covered_branches": 106,
+        "missing_branches": 56,
+        "percent_branches_covered": 65.4320987654321,
+        "percent_branches_covered_display": "65"
+      },
+      "final": {
+        "covered_lines": 357,
+        "num_statements": 434,
+        "percent_covered": 78.18791946308725,
+        "percent_covered_display": "78",
+        "missing_lines": 77,
+        "excluded_lines": 0,
+        "percent_statements_covered": 82.25806451612904,
+        "percent_statements_covered_display": "82",
+        "num_branches": 162,
+        "num_partial_branches": 37,
+        "covered_branches": 109,
+        "missing_branches": 53,
+        "percent_branches_covered": 67.28395061728395,
+        "percent_branches_covered_display": "67"
+      },
+      "functions": [
+        {
+          "function": "_today",
+          "line": 21,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_hash_payload",
+          "line": 25,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_add_months",
+          "line": 30,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_quote_field_name",
+          "line": 38,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_quote_jql_list",
+          "line": 42,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_quote_jql",
+          "line": 46,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            49
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_strip_order_by",
+          "line": 55,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            56
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_display",
+          "line": 59,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            61,
+            66
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_team_pt_display",
+          "line": 70,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            76,
+            77,
+            78
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_issue_type",
+          "line": 81,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_project_key",
+          "line": 86,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_parent_key_from_value",
+          "line": 92,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            99
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_date_text",
+          "line": 103,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_labels",
+          "line": 109,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "ResolvedQuarter.to_dict",
+          "line": 122,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService.__init__",
+          "line": 135,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService.mode",
+          "line": 140,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService.resolve_fiscal_quarter",
+          "line": 143,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [
+            149,
+            150,
+            151,
+            152,
+            153,
+            154,
+            155,
+            156,
+            157
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._quarter_from_date",
+          "line": 163,
+          "executed_statement_lines": 10,
+          "missing_statement_lines": [
+            166,
+            169
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._quarter_from_name",
+          "line": 177,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            178,
+            179,
+            180,
+            181,
+            182,
+            183,
+            184,
+            185,
+            186,
+            187,
+            188
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService.context",
+          "line": 190,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService._scope_jql",
+          "line": 207,
+          "executed_statement_lines": 18,
+          "missing_statement_lines": [
+            220,
+            221,
+            225,
+            228,
+            239
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._resolve_fields",
+          "line": 242,
+          "executed_statement_lines": 14,
+          "missing_statement_lines": [
+            255,
+            256,
+            262,
+            263
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._search_fields",
+          "line": 267,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService._parent_key",
+          "line": 276,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [
+            284
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._field_value",
+          "line": 287,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            290
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._issue_public",
+          "line": 293,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService._ancestry",
+          "line": 308,
+          "executed_statement_lines": 22,
+          "missing_statement_lines": [
+            329,
+            330,
+            331,
+            334
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._hierarchy_finding",
+          "line": 336,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService._date_findings",
+          "line": 359,
+          "executed_statement_lines": 16,
+          "missing_statement_lines": [
+            366,
+            377
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._label_finding",
+          "line": 407,
+          "executed_statement_lines": 15,
+          "missing_statement_lines": [
+            419,
+            425
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService.review",
+          "line": 453,
+          "executed_statement_lines": 59,
+          "missing_statement_lines": [
+            467,
+            490,
+            559
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._changes_from_findings",
+          "line": 608,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            609,
+            610,
+            611,
+            612,
+            613,
+            614,
+            623,
+            624,
+            625,
+            626,
+            636
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService.preview_fix",
+          "line": 638,
+          "executed_statement_lines": 13,
+          "missing_statement_lines": [
+            654,
+            655,
+            661
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._apply_date_change",
+          "line": 702,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            713,
+            714
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "PortfolioHygieneService._apply_label_change",
+          "line": 716,
+          "executed_statement_lines": 16,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "PortfolioHygieneService.apply",
+          "line": 739,
+          "executed_statement_lines": 22,
+          "missing_statement_lines": [
+            742,
+            752,
+            753,
+            754,
+            762,
+            763,
+            770,
+            776,
+            777
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/services/repos.py": {
+      "baseline": {
+        "covered_lines": 204,
+        "num_statements": 289,
+        "percent_covered": 66.36568848758465,
+        "percent_covered_display": "66",
+        "missing_lines": 85,
+        "excluded_lines": 2,
+        "percent_statements_covered": 70.58823529411765,
+        "percent_statements_covered_display": "71",
+        "num_branches": 154,
+        "num_partial_branches": 24,
+        "covered_branches": 90,
+        "missing_branches": 64,
+        "percent_branches_covered": 58.44155844155844,
+        "percent_branches_covered_display": "58"
+      },
+      "final": {
+        "covered_lines": 204,
+        "num_statements": 289,
+        "percent_covered": 66.36568848758465,
+        "percent_covered_display": "66",
+        "missing_lines": 85,
+        "excluded_lines": 2,
+        "percent_statements_covered": 70.58823529411765,
+        "percent_statements_covered_display": "71",
+        "num_branches": 154,
+        "num_partial_branches": 24,
+        "covered_branches": 90,
+        "missing_branches": 64,
+        "percent_branches_covered": 58.44155844155844,
+        "percent_branches_covered_display": "58"
+      },
+      "functions": [
+        {
+          "function": "_skip",
+          "line": 58,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_read",
+          "line": 62,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_split_image",
+          "line": 66,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            68,
+            69,
+            71,
+            75
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_manifest_row",
+          "line": 78,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "discover_repositories",
+          "line": 85,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            89,
+            93,
+            94,
+            95
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_parse_requirements",
+          "line": 99,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_parse_pyproject",
+          "line": 108,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            120,
+            121,
+            122,
+            123,
+            124,
+            125
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_parse_poetry_lock",
+          "line": 128,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            129,
+            130,
+            131,
+            132,
+            133,
+            134,
+            135,
+            136,
+            137,
+            138,
+            139,
+            140,
+            141,
+            142,
+            143
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_parse_package_json",
+          "line": 146,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            149,
+            150
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_parse_package_lock",
+          "line": 158,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            159,
+            160,
+            161,
+            162,
+            163,
+            164,
+            165,
+            166,
+            167,
+            168,
+            169,
+            170,
+            171,
+            172,
+            173
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_parse_go_mod",
+          "line": 176,
+          "executed_statement_lines": 11,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_parse_pom",
+          "line": 190,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            191,
+            192,
+            193,
+            194,
+            195,
+            196,
+            197,
+            198,
+            199,
+            200,
+            201,
+            202,
+            203,
+            204,
+            205,
+            206,
+            207
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_parse_gradle",
+          "line": 210,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            211,
+            212,
+            213,
+            214
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_parse_images",
+          "line": 217,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_parse_helm_chart",
+          "line": 229,
+          "executed_statement_lines": 15,
+          "missing_statement_lines": [
+            236
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_parse_manifest",
+          "line": 248,
+          "executed_statement_lines": 20,
+          "missing_statement_lines": [
+            254,
+            256,
+            260,
+            264,
+            266
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_codeowners",
+          "line": 276,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "inventory_repository",
+          "line": 283,
+          "executed_statement_lines": 24,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_dedupe_rows",
+          "line": 319,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "inventory_repositories",
+          "line": 330,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "scan_manifests",
+          "line": 335,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [
+            341
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "extract_security_signals",
+          "line": 345,
+          "executed_statement_lines": 31,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    },
+    "src/engineering_ops/services/saved_views.py": {
+      "baseline": {
+        "covered_lines": 67,
+        "num_statements": 73,
+        "percent_covered": 89.01098901098901,
+        "percent_covered_display": "89",
+        "missing_lines": 6,
+        "excluded_lines": 0,
+        "percent_statements_covered": 91.78082191780823,
+        "percent_statements_covered_display": "92",
+        "num_branches": 18,
+        "num_partial_branches": 4,
+        "covered_branches": 14,
+        "missing_branches": 4,
+        "percent_branches_covered": 77.77777777777777,
+        "percent_branches_covered_display": "78"
+      },
+      "final": {
+        "covered_lines": 67,
+        "num_statements": 73,
+        "percent_covered": 89.01098901098901,
+        "percent_covered_display": "89",
+        "missing_lines": 6,
+        "excluded_lines": 0,
+        "percent_statements_covered": 91.78082191780823,
+        "percent_statements_covered_display": "92",
+        "num_branches": 18,
+        "num_partial_branches": 4,
+        "covered_branches": 14,
+        "missing_branches": 4,
+        "percent_branches_covered": 77.77777777777777,
+        "percent_branches_covered_display": "78"
+      },
+      "functions": [
+        {
+          "function": "view_id",
+          "line": 16,
+          "executed_statement_lines": 3,
+          "missing_statement_lines": [
+            19
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "default_views",
+          "line": 79,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "SavedViewStore._read",
+          "line": 94,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            99,
+            100,
+            102
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "SavedViewStore._write",
+          "line": 106,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "SavedViewStore.list",
+          "line": 110,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "SavedViewStore.bootstrap_defaults",
+          "line": 113,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "SavedViewStore.get",
+          "line": 120,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            125
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "SavedViewStore.upsert",
+          "line": 127,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "SavedViewStore.delete",
+          "line": 145,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            150
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/services/security.py": {
+      "baseline": {
+        "covered_lines": 79,
+        "num_statements": 90,
+        "percent_covered": 84.375,
+        "percent_covered_display": "84",
+        "missing_lines": 11,
+        "excluded_lines": 0,
+        "percent_statements_covered": 87.77777777777777,
+        "percent_statements_covered_display": "88",
+        "num_branches": 38,
+        "num_partial_branches": 9,
+        "covered_branches": 29,
+        "missing_branches": 9,
+        "percent_branches_covered": 76.3157894736842,
+        "percent_branches_covered_display": "76"
+      },
+      "final": {
+        "covered_lines": 78,
+        "num_statements": 89,
+        "percent_covered": 84.25196850393701,
+        "percent_covered_display": "84",
+        "missing_lines": 11,
+        "excluded_lines": 0,
+        "percent_statements_covered": 87.64044943820225,
+        "percent_statements_covered_display": "88",
+        "num_branches": 38,
+        "num_partial_branches": 9,
+        "covered_branches": 29,
+        "missing_branches": 9,
+        "percent_branches_covered": 76.3157894736842,
+        "percent_branches_covered_display": "76"
+      },
+      "functions": [
+        {
+          "function": "_clean_component",
+          "line": 11,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [
+            13
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_version_parts",
+          "line": 17,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            19
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "version_at_least",
+          "line": 26,
+          "executed_statement_lines": 6,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "finding_from_issue",
+          "line": 35,
+          "executed_statement_lines": 0,
+          "missing_statement_lines": [
+            36,
+            37,
+            38
+          ],
+          "status": "not_exercised"
+        },
+        {
+          "function": "_flatten_inventory",
+          "line": 51,
+          "executed_statement_lines": 7,
+          "missing_statement_lines": [
+            58
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_matches",
+          "line": 62,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [
+            64
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_group_keys",
+          "line": 70,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [
+            79
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "normalize_remediation_actions",
+          "line": 83,
+          "executed_statement_lines": 32,
+          "missing_statement_lines": [
+            121,
+            124,
+            130
+          ],
+          "status": "partial"
+        }
+      ]
+    },
+    "src/engineering_ops/services/sprints.py": {
+      "baseline": {
+        "covered_lines": 116,
+        "num_statements": 128,
+        "percent_covered": 87.79069767441861,
+        "percent_covered_display": "88",
+        "missing_lines": 12,
+        "excluded_lines": 0,
+        "percent_statements_covered": 90.625,
+        "percent_statements_covered_display": "91",
+        "num_branches": 44,
+        "num_partial_branches": 7,
+        "covered_branches": 35,
+        "missing_branches": 9,
+        "percent_branches_covered": 79.54545454545455,
+        "percent_branches_covered_display": "80"
+      },
+      "final": {
+        "covered_lines": 116,
+        "num_statements": 128,
+        "percent_covered": 87.79069767441861,
+        "percent_covered_display": "88",
+        "missing_lines": 12,
+        "excluded_lines": 0,
+        "percent_statements_covered": 90.625,
+        "percent_statements_covered_display": "91",
+        "num_branches": 44,
+        "num_partial_branches": 7,
+        "covered_branches": 35,
+        "missing_branches": 9,
+        "percent_branches_covered": 79.54545454545455,
+        "percent_branches_covered_display": "80"
+      },
+      "functions": [
+        {
+          "function": "_status_name",
+          "line": 6,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_status_category",
+          "line": 10,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "is_done",
+          "line": 14,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "story_points",
+          "line": 21,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [
+            25,
+            28,
+            29
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "summarize_capacity",
+          "line": 32,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "completion_percent",
+          "line": 48,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_issue_summary",
+          "line": 52,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_assignee_name",
+          "line": 56,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "_display_values",
+          "line": 61,
+          "executed_statement_lines": 11,
+          "missing_statement_lines": [
+            73,
+            74,
+            75
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "team_names",
+          "line": 78,
+          "executed_statement_lines": 13,
+          "missing_statement_lines": [
+            86,
+            95
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "_completion_row",
+          "line": 100,
+          "executed_statement_lines": 2,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "progress_by_engineer",
+          "line": 117,
+          "executed_statement_lines": 4,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "progress_by_team",
+          "line": 131,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "is_blocked",
+          "line": 148,
+          "executed_statement_lines": 5,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "issue_projection_row",
+          "line": 156,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "blocked_work",
+          "line": 171,
+          "executed_statement_lines": 1,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "rollover_candidates",
+          "line": 179,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        },
+        {
+          "function": "issue_split_proposals",
+          "line": 194,
+          "executed_statement_lines": 9,
+          "missing_statement_lines": [
+            205
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "overcommit_analysis",
+          "line": 218,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [
+            252,
+            253,
+            254
+          ],
+          "status": "partial"
+        },
+        {
+          "function": "sprint_intelligence",
+          "line": 263,
+          "executed_statement_lines": 8,
+          "missing_statement_lines": [],
+          "status": "all_statements_exercised"
+        }
+      ]
+    }
+  }
+}

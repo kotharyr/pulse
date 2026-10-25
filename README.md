@@ -123,8 +123,11 @@ Health endpoint:
 curl -s http://127.0.0.1:8080/health | python3 -m json.tool
 ```
 
-`/health` is a readiness check and authenticates to each configured Jira instance. Use
-`/health/live` for a dependency-free liveness check.
+`/health` and `/health/live` are dependency-free liveness checks. `/ready` checks
+configuration readiness without contacting Jira. `/ready`, `/diagnostics`, and
+`/api/...` require the configured bearer token when `MCP_BEARER_TOKEN` is set.
+In the console, enter the token in **Access token** and select **Connect**;
+the token is kept in memory for the current page only.
 
 MCP endpoint:
 
@@ -258,3 +261,17 @@ pytest
 ## ChatGPT Enterprise
 
 ChatGPT must connect to a remotely reachable MCP endpoint. A local `127.0.0.1` endpoint is for development and MCP Inspector only. For a private corporate environment, deploy the server behind company-controlled HTTPS or use OpenAI Secure MCP Tunnel according to your workspace policies.
+
+## Reliability and testing
+
+See [the reliability audit](docs/reliability-report.md) for verified fixes, test
+coverage, unfinished workflows and prioritized follow-up work. Tests use example
+configuration, default to `recommend_only`, and block external socket connections.
+Run `pytest` for Python tests and `node --test tests/console.test.cjs` for the
+console authentication tests.
+
+Low-level MCP apply tools now require the `preview_id` returned by their matching
+preview tool. They no longer generate approval IDs during apply. Stored workflows
+use the record's top-level `preview_id`; the nested preview ID fingerprints the
+plan and should not be substituted for the stored review ID. Rejected, failed or
+completed stored reviews cannot be replayed; create and review a new preview.

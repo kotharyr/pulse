@@ -5,6 +5,7 @@ const TASK_NOTES_KEY = "engineeringOpsConsole.taskNotes.v1";
 const SIDEBAR_KEY = "engineeringOpsConsole.sidebarCollapsed.v1";
 
 const state = {
+  authToken: "",
   instance: "cloud",
   instances: [],
   page: 1,
@@ -26,6 +27,8 @@ const state = {
 };
 
 const els = {
+  consoleToken: document.getElementById("console-token"),
+  consoleConnect: document.getElementById("console-connect"),
   appShell: document.querySelector(".app-shell"),
   mode: document.getElementById("mode-pill"),
   sidebarToggle: document.getElementById("sidebar-toggle"),
@@ -250,8 +253,12 @@ function toast(message) {
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
-    headers: {"Content-Type": "application/json", ...(options.headers || {})},
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(state.authToken ? {Authorization: `Bearer ${state.authToken}`} : {}),
+      ...(options.headers || {}),
+    },
   });
   const data = await response.json();
   if (!response.ok) {
@@ -1487,6 +1494,15 @@ function restoreTaskNotes() {
 }
 
 function bindEvents() {
+  els.consoleConnect.addEventListener("click", async () => {
+    // Keep credentials in memory only; do not persist them in browser storage.
+    state.authToken = els.consoleToken.value.trim();
+    els.consoleToken.value = "";
+    await loadInstances();
+    await loadViews();
+    await loadHistory();
+    await loadPlatform();
+  });
   els.sidebarToggle.addEventListener("click", () => setSidebarCollapsed(!state.sidebarCollapsed));
   els.themeToggle.addEventListener("change", () => setTheme(els.themeToggle.checked ? "dark" : "light"));
   els.navItems.forEach((item) => {

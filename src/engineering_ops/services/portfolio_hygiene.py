@@ -740,13 +740,18 @@ class PortfolioHygieneService:
         record = self.backend.execution_store.get_record(preview_id).to_dict()
         if record["action"] != "portfolio_hygiene_fix":
             return {"applied": False, "preview_id": preview_id, "reason": "preview_id does not reference a Portfolio Hygiene preview"}
+        record = self.backend.execution_store.begin_apply(preview_id)
         preview = record["preview"]
         instance = record["instance"]
         if self.mode != "safe_apply":
             result = {"applied": False, "preview_id": preview_id, "reason": "MODE must be safe_apply"}
             self.backend.execution_store.mark_applied(preview_id, result)
             return result
-        jira = self.backend.client(instance)
+        try:
+            jira = self.backend.client(instance)
+        except Exception as exc:
+            self.backend.execution_store.mark_applied(preview_id, {"applied": False, "reason": str(exc)})
+            raise
         results = []
         for change in preview.get("changes") or []:
             try:

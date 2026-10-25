@@ -54,7 +54,8 @@ Prefer adding pure logic here, then orchestrating it from `EngineeringOpsBackend
 Static console assets live under `engineering_ops/console/static`. Browser code
 must call `/api/...` endpoints only; it must not duplicate Jira field resolution,
 pagination rules, sprint math, preview gates, or connector logic. Saved views are
-browser-local for now. Future Action Register work should add a business service
+stored locally by the shared backend in `config/saved_views.json`. Planning notes
+remain browser-local. Future Action Register work should add a business service
 for action ordering/due dates, expose it through `EngineeringOpsBackend`, and then
 bind it to REST/UI routes.
 

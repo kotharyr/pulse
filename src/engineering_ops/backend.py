@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -584,7 +585,6 @@ class EngineeringOpsBackend:
         limit: int,
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         jira = self.client(instance)
-        issues = jira.search(jql, ["summary"], limit)
         requested_updates = [{"field": field, "value": value} for field, value in updates.items()]
         resolved_fields: dict[str, dict[str, Any]] = {}
         errors: list[dict[str, Any]] = []
@@ -594,6 +594,7 @@ class EngineeringOpsBackend:
             except Exception as exc:
                 errors.append({"field": name, "error": str(exc)})
 
+        issues = jira.search(jql, ["summary", *[item["id"] for item in resolved_fields.values()]], min(limit, self.settings.max_search_results))
         public_issues = []
         internal_issues = []
         for issue in issues:
@@ -605,7 +606,10 @@ class EngineeringOpsBackend:
                     continue
                 try:
                     internal_fields[resolved["id"]] = resolve_value_for_issue(jira, issue["key"], resolved["id"], value)
-                    public_updates.append({"field": name, "value": value})
+                    current_value = (issue.get("fields") or {}).get(resolved["id"])
+                    if isinstance(current_value, dict):
+                        current_value = current_value.get("value") or current_value.get("name") or current_value.get("displayName")
+                    public_updates.append({"field": name, "value": value, "current_value": current_value})
                 except Exception as exc:
                     errors.append({"issue_key": issue["key"], "field": name, "error": str(exc)})
             public_issues.append({
@@ -617,6 +621,8 @@ class EngineeringOpsBackend:
 
         preview = {
             "mode": self.settings.mode,
+            "instance": instance,
+            "jql": jql,
             "matched": len(issues),
             "updates": requested_updates,
             "issues": public_issues,
@@ -657,7 +663,7 @@ class EngineeringOpsBackend:
                 results.append({"issue_key": item["issue_key"], "ok": True})
             except Exception as exc:
                 results.append({"issue_key": item["issue_key"], "ok": False, "error": str(exc)})
-        return {"applied": all(result["ok"] for result in results), "preview_id": preview["preview_id"], "results": results}
+        return {"applied": bool(results) and all(result["ok"] for result in results), "preview_id": preview["preview_id"], "results": results}
 
     def assign_to_quarter(
         self,
@@ -829,6 +835,20 @@ class EngineeringOpsBackend:
         split_points = 0.0
         plan_previews = []
         errors = []
+        if sprint_id == next_sprint_id:
+            errors.append({"error": "Current and next sprint must be different"})
+        if current_sprint.get("state") != "active":
+            errors.append({"error": "Current sprint must be active"})
+        if next_sprint.get("state") not in {"future", "active"}:
+            errors.append({"error": "Next sprint must be future or active"})
+        current_board, next_board = current_sprint.get("originBoardId"), next_sprint.get("originBoardId")
+        if current_board and next_board and current_board != next_board:
+            errors.append({"error": "Current and next sprint must belong to the same board"})
+        overlap = set(move_keys) & split_sources
+        if overlap:
+            errors.append({"error": "Issues cannot be both moved and split", "issue_keys": sorted(overlap)})
+        if len(split_sources) != len(plans):
+            errors.append({"error": "Each split must have a unique source_issue_key"})
         for plan in plans:
             key = plan.get("source_issue_key")
             source = current_map.get(key)
@@ -842,13 +862,18 @@ class EngineeringOpsBackend:
             except (TypeError, ValueError):
                 errors.append({"source_issue_key": key, "error": "story_points must be numeric"})
                 pts = 0
-            split_points += pts
+            if not math.isfinite(pts) or pts < 0:
+                errors.append({"source_issue_key": key, "error": "story_points must be finite and non-negative"})
+                pts = 0
+            if plan.get("move_new_issue_to_next_sprint", True):
+                split_points += pts
             source_type = ((source.get("fields") or {}).get("issuetype") or {}).get("name")
             plan_previews.append({
                 "source_issue_key": key,
                 "source_summary": (source.get("fields") or {}).get("summary"),
                 "source_issue_type": source_type,
                 "new_summary": plan.get("new_summary"),
+                "new_description": plan.get("new_description"),
                 "new_issue_type": plan.get("new_issue_type") or source_type,
                 "story_points": pts,
                 "parent_key": plan.get("parent_key"),
@@ -862,6 +887,11 @@ class EngineeringOpsBackend:
                     "source_issue_key": key,
                     "error": "source_transition_status is required so the original work is explicitly resolved before sprint closure",
                 })
+            else:
+                try:
+                    jira.resolve_status_transition(key, plan["source_transition_status"], require_done=True)
+                except Exception as exc:
+                    errors.append({"source_issue_key": key, "error": str(exc)})
         next_issues = jira.sprint_issues(next_sprint_id, story_points_field_id=points_id)
         next_existing = summarize_capacity(next_issues, points_name, points_id)
         board_id = next_sprint.get("originBoardId") or current_sprint.get("originBoardId") or jira.cfg.default_board_id
@@ -872,7 +902,7 @@ class EngineeringOpsBackend:
             capacity["story_points"],
             jira.cfg.sprint_capacity_buffer_percent,
             next_existing["issue_count"],
-            len(move_keys) + len(plans),
+            len(move_keys) + sum(1 for plan in plans if plan.get("move_new_issue_to_next_sprint", True)),
             capacity["issue_count"],
         )
         unhandled = sorted(set(issue["key"] for issue in incomplete) - set(move_keys) - split_sources)
@@ -880,6 +910,7 @@ class EngineeringOpsBackend:
             errors.append({"error": "Incomplete issues would remain unhandled when the sprint closes", "issue_keys": unhandled})
         preview = {
             "mode": self.settings.mode,
+            "instance": instance,
             "current_sprint": current_sprint,
             "next_sprint": next_sprint,
             "current_incomplete_issue_keys": [issue["key"] for issue in incomplete],
@@ -919,7 +950,7 @@ class EngineeringOpsBackend:
         points_name, points_id = self._story_points_field(jira)
         created, transitions = [], []
         new_issue_keys = []
-        for plan in split_plans or []:
+        for plan in preview["split_plans"]:
             source = jira.get_issue(plan["source_issue_key"], ["summary", "description", "issuetype", "project", "parent", points_id or points_name])
             source_fields = source.get("fields") or {}
             project_key = (source_fields.get("project") or {}).get("key")
@@ -940,7 +971,9 @@ class EngineeringOpsBackend:
             result = jira.create_issue(fields)
             new_key = result.get("key")
             created.append({"source_issue_key": plan["source_issue_key"], "new_issue_key": new_key})
-            if new_key and plan.get("move_new_issue_to_next_sprint", True):
+            if not new_key:
+                raise RuntimeError("Split issue creation returned no issue key; sprint closure stopped")
+            if plan.get("will_move_new_issue_to_next_sprint", True):
                 new_issue_keys.append(new_key)
             transitions.append(jira.transition_issue_to_status(plan["source_issue_key"], plan["source_transition_status"]))
         all_move = list(dict.fromkeys((preview["move_issue_keys"] or []) + new_issue_keys))
@@ -1014,40 +1047,47 @@ class EngineeringOpsBackend:
     def apply_execution_preview(self, preview_id: str) -> dict[str, Any]:
         """Apply a stored preview through the same backend write gates used by MCP."""
         record = self.execution_store.get_record(preview_id).to_dict()
+        if record["action"] == "portfolio_hygiene_fix":
+            self.portfolio_hygiene_apply(preview_id)
+            return self.execution_store.get_record(preview_id).to_dict()
+        record = self.execution_store.begin_apply(preview_id)
         action = record["action"]
         params = record["parameters"]
+        plan_id = record["preview"]["preview_id"]
         instance = record["instance"]
-        if action == "field_updates":
-            result = self.apply_field_updates(
-                instance,
-                params["jql"],
-                params["updates"],
-                int(params.get("limit", 500)),
-                preview_id=preview_id,
-            )
-        elif action == "assign_to_quarter":
-            result = self.assign_to_quarter(
-                instance,
-                params["jql"],
-                params["quarter"],
-                dry_run=False,
-                limit=int(params.get("limit", 500)),
-                preview_id=preview_id,
-            )
-        elif action == "close_sprint":
-            result = self.apply_close_sprint(
-                instance,
-                int(params["sprint_id"]),
-                int(params["next_sprint_id"]),
-                params.get("move_issue_keys"),
-                params.get("split_plans"),
-                bool(params.get("rollover_all_incomplete", False)),
-                preview_id=preview_id,
-            )
-        elif action == "portfolio_hygiene_fix":
-            result = self.portfolio_hygiene_apply(preview_id)
-        else:
-            raise ValueError(f"Unsupported execution action: {action}")
+        try:
+            if action == "field_updates":
+                result = self.apply_field_updates(
+                    instance,
+                    params["jql"],
+                    params["updates"],
+                    int(params.get("limit", 500)),
+                    preview_id=plan_id,
+                )
+            elif action == "assign_to_quarter":
+                result = self.assign_to_quarter(
+                    instance,
+                    params["jql"],
+                    params["quarter"],
+                    dry_run=False,
+                    limit=int(params.get("limit", 500)),
+                    preview_id=plan_id,
+                )
+            elif action == "close_sprint":
+                result = self.apply_close_sprint(
+                    instance,
+                    int(params["sprint_id"]),
+                    int(params["next_sprint_id"]),
+                    params.get("move_issue_keys"),
+                    params.get("split_plans"),
+                    bool(params.get("rollover_all_incomplete", False)),
+                    preview_id=plan_id,
+                )
+            else:
+                raise ValueError(f"Unsupported execution action: {action}")
+        except Exception as exc:
+            self.execution_store.mark_applied(preview_id, {"applied": False, "reason": str(exc)})
+            raise
         updated = self.execution_store.mark_applied(preview_id, result)
         self.audit_trail.record(
             "execution_preview_applied",

@@ -13,7 +13,14 @@ Sprint closure is a workflow, not a single API call. The assistant first creates
 5. Run `preview_close_sprint`.
 6. Review the overcommit warning and every source transition/new issue.
 7. If necessary, remove/defer work from the next sprint and preview again.
-8. Only then run `apply_close_sprint`.
+8. Only then run `apply_close_sprint` with that preview's `preview_id`.
+
+For the stored workflow, use `sprint_close_preview`, review the result, and pass
+its execution reference ID to `sprint_close_apply`. Stored review IDs are unique;
+rejected or consumed reviews cannot be replayed. Sprint states and source data
+are checked again on apply. Split source transitions must target Jira's Done
+status category. A multi-step failure can leave partial changes, so reconcile
+Jira state before creating and reviewing another plan.
 
 ## Split plan structure
 
