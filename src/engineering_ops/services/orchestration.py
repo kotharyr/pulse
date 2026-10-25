@@ -442,7 +442,7 @@ class EngineeringOrchestrator:
                 risks=[Risk("Preview id required", "Apply operations must reference a reviewed execution preview.", "high")],
                 source_coverage=coverage,
             )
-        record = self._safe(coverage, "execution_apply", lambda: self.backend.apply_execution_preview(preview_id), {})
+        record = self._safe(coverage, "execution_apply", lambda: self.backend.apply_execution_preview(preview_id, expected_action="close_sprint"), {})
         result = record.get("result") or {}
         reason = record.get("error") or result.get("reason")
         risks = []

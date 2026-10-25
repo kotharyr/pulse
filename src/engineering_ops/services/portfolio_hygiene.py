@@ -9,6 +9,7 @@ from hashlib import sha256
 from typing import Any
 
 from engineering_ops.services.fields import resolve_field
+from engineering_ops.services.recovery import run_step, BeforeWriteBlocked
 
 
 INITIATIVE_TYPE = "initiative"
@@ -669,6 +670,7 @@ class PortfolioHygieneService:
             "mode": self.mode,
             "instance": instance,
             "categories": sorted(allowed),
+            "connector_version": self.backend._connector_version(instance) if hasattr(self.backend, "_connector_version") else None,
             "change_count": len(changes),
             "changes": changes,
             "manual_review_exclusions": manual_exclusions,
@@ -736,60 +738,45 @@ class PortfolioHygieneService:
             jira.update_issue_operations(change["issue_key"], {"labels": operations})
         return {"issue_key": change["issue_key"], "change_id": change["change_id"], "ok": True}
 
+    def change_request(self, change):
+        if change["category"] == "dates":
+            return {"issue_key": change["issue_key"], "change_id": change["change_id"],
+                    "values": {change["field"]: change["proposed_value"]},
+                    "before": {change["field"]: change.get("current_value")}}, "date"
+        if change["category"] == "labels":
+            return {"issue_key": change["issue_key"], "change_id": change["change_id"],
+                    "add": change.get("add_labels", []), "remove": change.get("remove_labels", []),
+                    "expected_qp": sorted(v for v in change.get("current_value", []) if QP_LABEL_RE.match(v))}, "labels"
+        raise BeforeWriteBlocked("Parent changes and unsupported change categories cannot be applied")
+
+    def execute_record(self, record):
+        jira = self.backend.client(record["instance"])
+        results = []
+        for change in record["preview"].get("changes", []):
+            request, kind = self.change_request(change)
+            def apply_change(change=change, kind=kind):
+                result = self._apply_date_change(jira, change) if kind == "date" else self._apply_label_change(jira, change)
+                if not result.get("ok"):
+                    raise BeforeWriteBlocked(result.get("reason", "Source changed since preview"))
+                return result
+            try:
+                result = run_step(self.backend.execution_store, record["preview_id"], change["change_id"], kind, request, apply_change)
+                results.append(result)
+            except BeforeWriteBlocked as exc:
+                return {"applied": False, "reason": str(exc), "results": [*results, {"ok": False, "change_id": change["change_id"], "reason": str(exc)}]}
+        return {"applied": bool(results), "preview_id": record["preview_id"], "results": results}
+
     def apply(self, preview_id: str, *, allow_parent_changes: bool = False) -> dict[str, Any]:
-        record = self.backend.execution_store.get_record(preview_id).to_dict()
-        if record["action"] != "portfolio_hygiene_fix":
-            return {"applied": False, "preview_id": preview_id, "reason": "preview_id does not reference a Portfolio Hygiene preview"}
-        record = self.backend.execution_store.begin_apply(preview_id)
-        preview = record["preview"]
-        instance = record["instance"]
+        record = self.backend.execution_store.begin_apply(preview_id, action="portfolio_hygiene_fix")
         if self.mode != "safe_apply":
             result = {"applied": False, "preview_id": preview_id, "reason": "MODE must be safe_apply"}
-            self.backend.execution_store.mark_applied(preview_id, result)
-            return result
-        try:
-            jira = self.backend.client(instance)
-        except Exception as exc:
-            self.backend.execution_store.mark_applied(preview_id, {"applied": False, "reason": str(exc)})
-            raise
-        results = []
-        for change in preview.get("changes") or []:
+        else:
             try:
-                if change.get("category") == "dates":
-                    results.append(self._apply_date_change(jira, change))
-                elif change.get("category") == "labels":
-                    results.append(self._apply_label_change(jira, change))
-                elif change.get("category") == "hierarchy":
-                    results.append({
-                        "issue_key": change.get("issue_key"),
-                        "change_id": change.get("change_id"),
-                        "ok": False,
-                        "reason": "parent changes require explicit approved destructive review" if not allow_parent_changes else "no unambiguous parent change available",
-                    })
-                else:
-                    results.append({
-                        "issue_key": change.get("issue_key"),
-                        "change_id": change.get("change_id"),
-                        "ok": False,
-                        "reason": "unsupported change category",
-                    })
+                result = self.execute_record(record)
             except Exception as exc:
-                results.append({
-                    "issue_key": change.get("issue_key"),
-                    "change_id": change.get("change_id"),
-                    "ok": False,
-                    "error": str(exc),
-                })
-        result = {
-            "applied": bool(results) and all(row.get("ok") for row in results),
-            "preview_id": preview_id,
-            "results": results,
-        }
+                self.backend.execution_store.mark_applied(preview_id, {"applied": False, "reason": type(exc).__name__})
+                raise
         self.backend.execution_store.mark_applied(preview_id, result)
-        self.backend.audit_trail.record(
-            "portfolio_hygiene_apply",
-            target=instance,
-            outcome="succeeded" if result["applied"] else "failed",
-            details={"preview_id": preview_id, "results": len(results)},
-        )
+        self.backend.audit_trail.record("portfolio_hygiene_apply", target=record["instance"],
+            outcome="succeeded" if result["applied"] else "failed", details={"preview_id": preview_id})
         return result

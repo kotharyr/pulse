@@ -129,6 +129,7 @@ class ResolvedCredential(BaseModel):
 
 
 class Settings(BaseSettings):
+    state_db_file: str = Field("config/pulse-state.sqlite3", alias="PULSE_STATE_DB")
     model_config = SettingsConfigDict(env_file=None, extra="ignore", populate_by_name=True)
 
     mode: Literal["recommend_only", "safe_apply", "approved_destructive"] = Field("recommend_only", alias="MODE")
@@ -211,6 +212,11 @@ class Settings(BaseSettings):
                 return json.loads(text)
             return [part.strip() for part in text.split(",") if part.strip()]
         return value
+
+    @property
+    def state_db_path(self) -> Path:
+        path = Path(self.state_db_file).expanduser()
+        return path.resolve() if path.is_absolute() else (PROJECT_ROOT / path).resolve()
 
     @property
     def jira_instances_path(self) -> Path:

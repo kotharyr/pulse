@@ -36,38 +36,29 @@ class AuditEvent:
 
 
 class AuditTrail:
-    """Process-local audit trail for previews, applies, config, and diagnostics."""
+    """Durable local audit events, shared with the execution database in production."""
 
-    def __init__(self) -> None:
-        self._events: list[AuditEvent] = []
-        self._next_id = 1
+    def __init__(self, path=None):
+        from engineering_ops.services.state import StateDatabase
+        self.db = path if isinstance(path, StateDatabase) else StateDatabase(path)
 
-    def record(
-        self,
-        action: str,
-        *,
-        actor: str = "system",
-        target: str | None = None,
-        outcome: str = "recorded",
-        correlation_id: str | None = None,
-        details: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        event = AuditEvent(
-            event_id=self._next_id,
-            action=action,
-            actor=actor,
-            target=target,
-            outcome=outcome,
-            correlation_id=correlation_id,
-            details=deepcopy(details or {}),
-        )
-        self._next_id += 1
-        self._events.append(event)
-        return event.to_dict()
+    def record(self, action, *, actor=None, target=None, outcome="recorded", correlation_id=None, details=None):
+        import json
+        from engineering_ops.services.identity import current_actor
+        event = AuditEvent(0, action, actor or current_actor(), target, outcome, correlation_id, details or {})
+        row = event.to_dict()
+        row.pop("event_id")
+        with self.db.transaction() as db:
+            cursor = db.execute("INSERT INTO audit(data) VALUES (?)", (json.dumps(row),))
+            row["event_id"] = cursor.lastrowid
+        return row
 
-    def list(self, limit: int = 100) -> list[dict[str, Any]]:
-        rows = self._events[-max(1, int(limit)):]
-        return [event.to_dict() for event in reversed(rows)]
+    def list(self, limit=100):
+        import json
+        with self.db.lock:
+            rows = self.db.connection.execute("SELECT event_id,data FROM audit ORDER BY event_id DESC LIMIT ?", (max(1, min(int(limit), 1000)),)).fetchall()
+            return [{**json.loads(row["data"]), "event_id": row["event_id"]} for row in rows]
 
-    def count(self) -> int:
-        return len(self._events)
+    def count(self):
+        with self.db.lock:
+            return self.db.connection.execute("SELECT COUNT(*) FROM audit").fetchone()[0]

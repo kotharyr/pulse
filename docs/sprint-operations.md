@@ -63,3 +63,13 @@ NEXT SPRINT IS PROJECTED TO BE OVERCOMMITTED
 ```
 
 The warning does not automatically remove work. ChatGPT can then help decide what to defer.
+
+## Partial execution recovery
+
+Every split create, transition, move batch and close has a durable step receipt.
+The split preview includes its recovery label. If a response is lost, reconcile
+the stored execution before retrying. Use `reconcile_execution(preview_id)`,
+review the result, and pass its fresh `recovery_id` to `resume_execution`.
+Pulse skips confirmed steps and blocks uncertain creates, changed source scope
+and active workers. Recovery still requires `MODE=approved_destructive`.
+See [the recovery runbook](p1-reliability.md).

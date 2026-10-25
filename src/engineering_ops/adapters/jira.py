@@ -362,7 +362,7 @@ class JiraClient:
     def sprint_issues(self, sprint_id: int, limit: int = 1000, story_points_field_id: str | None = None):
         fields = [
             "summary", "description", "status", "assignee", "issuetype", "project",
-            "parent", "labels",
+            "parent", "labels", "updated",
         ]
         if story_points_field_id:
             fields.append(story_points_field_id)

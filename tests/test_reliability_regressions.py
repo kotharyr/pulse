@@ -259,9 +259,9 @@ def test_execution_failure_is_recorded_and_not_replayed(monkeypatch):
     record = backend.create_execution_preview("close_sprint", {"instance": "fake", "sprint_id": 1, "next_sprint_id": 2, "rollover_all_incomplete": True})
     with pytest.raises(RuntimeError, match="Move failed"):
         backend.apply_execution_preview(record["preview_id"])
-    assert backend.execution_store.get_record(record["preview_id"]).status == "failed"
+    assert backend.execution_store.get_record(record["preview_id"]).status == "recovery_required"
     assert jira.writes == []
-    with pytest.raises(ValueError, match="failed"):
+    with pytest.raises(ValueError, match="recovery_required"):
         backend.apply_execution_preview(record["preview_id"])
 
 

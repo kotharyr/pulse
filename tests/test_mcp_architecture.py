@@ -91,7 +91,7 @@ def test_mcp_orchestration_wrappers_call_backend(monkeypatch):
 def test_static_bearer_token_verifier():
     verifier = StaticBearerTokenVerifier("correct")
     assert asyncio.run(verifier.verify_token("wrong")) is None
-    assert asyncio.run(verifier.verify_token("correct")).client_id == "engineering-ops-client"
+    assert asyncio.run(verifier.verify_token("correct")).client_id.startswith("token:")
 
 
 def test_mcp_endpoint_requires_configured_bearer_token(monkeypatch):

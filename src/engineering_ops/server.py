@@ -109,6 +109,17 @@ def sprint_close_apply(preview_id: str) -> dict:
     return backend.sprint_close_apply_workflow(preview_id)
 
 
+def reconcile_execution(preview_id: str) -> dict:
+    """Read-only reconciliation of a partial execution. Review its observations before resuming."""
+    return backend.reconcile_execution(preview_id)
+
+
+def resume_execution(preview_id: str, recovery_id: str) -> dict:
+    """Resume a reviewed partial execution. Requires the original actor, a fresh recovery_id and the correct write mode."""
+    return backend.resume_execution(preview_id, recovery_id)
+
+
+
 def portfolio_review(
     instance: str | None = None,
     project: str | None = None,
@@ -332,6 +343,8 @@ def build_plugin_registry() -> PluginRegistry:
             sprint_analysis,
             sprint_close_preview,
             sprint_close_apply,
+            reconcile_execution,
+            resume_execution,
             portfolio_review,
             portfolio_hygiene_review,
             portfolio_hygiene_preview_fix,

@@ -38,8 +38,11 @@ should call connector methods rather than constructing Jira REST paths or auth.
   update payloads.
 - `sprints.py`: sprint status, story points, done detection, blocked work,
   rollover candidates, split proposals, progress breakdowns, and overcommit math.
-- `executions.py`: process-local preview/apply/reject history for console
-  execution workflows.
+- `executions.py`: transactional SQLite preview/apply/reject history, approval
+  claims and step receipts shared by local workers.
+- `state.py`: private local SQLite persistence and transactions.
+- `identity.py`: trusted authenticated actor context shared by MCP and REST.
+- `recovery.py`: write-ahead mutation receipts and read-only reconciliation.
 - `health.py`: stale, blocked, unassigned, and domain-label summaries.
 - `repos.py`: local repository discovery, manifest scanning, and security signal
   extraction.

@@ -25,7 +25,9 @@ from engineering_ops.services.environment import (
 )
 from engineering_ops.services.fields import resolve_field, resolve_value_for_issue
 from engineering_ops.services.health import engineering_health as health_summary
-from engineering_ops.services.executions import ExecutionHistory
+from engineering_ops.services.executions import ExecutionHistory, fingerprint
+from engineering_ops.services.recovery import run_step, reconcile, RecoveryBlocked
+from engineering_ops.services.identity import current_actor
 from engineering_ops.services.orchestration import EngineeringOrchestrator
 from engineering_ops.services.platform import PlatformDiagnostics
 from engineering_ops.services.portfolio_hygiene import PortfolioHygieneService
@@ -139,6 +141,12 @@ class EngineeringOpsBackend:
 
     def client(self, instance: str) -> JiraClient:
         return self.client_getter(instance)
+
+    def _connector_version(self, instance: str) -> str:
+        cfg = self.client(instance).cfg
+        return fingerprint({"url": getattr(cfg, "base_url", ""),
+                            "type": getattr(cfg, "instance_type", getattr(cfg, "kind", "")),
+                            "project": getattr(cfg, "default_project", None)})
 
     def orchestrator(self) -> EngineeringOrchestrator:
         return EngineeringOrchestrator(self)
@@ -594,7 +602,7 @@ class EngineeringOpsBackend:
             except Exception as exc:
                 errors.append({"field": name, "error": str(exc)})
 
-        issues = jira.search(jql, ["summary", *[item["id"] for item in resolved_fields.values()]], min(limit, self.settings.max_search_results))
+        issues = jira.search(jql, ["summary", "updated", *[item["id"] for item in resolved_fields.values()]], min(limit, self.settings.max_search_results))
         public_issues = []
         internal_issues = []
         for issue in issues:
@@ -623,6 +631,8 @@ class EngineeringOpsBackend:
             "mode": self.settings.mode,
             "instance": instance,
             "jql": jql,
+            "connector_version": self._connector_version(instance),
+            "source_versions": {issue["key"]: fingerprint(issue.get("fields") or {}) for issue in issues},
             "matched": len(issues),
             "updates": requested_updates,
             "issues": public_issues,
@@ -631,54 +641,64 @@ class EngineeringOpsBackend:
         }
         return _with_preview_id(preview), internal_issues
 
-    def preview_field_updates(self, instance: str, jql: str, updates: dict[str, Any], limit: int = 500) -> dict:
-        """Preview bulk updates using human-readable Jira field names and displayed option values. Never writes."""
-        preview, _ = self._build_field_update_preview(instance, jql, updates, limit)
-        return preview
+    def preview_field_updates(self, instance, jql, updates, limit=500) -> dict:
+        """Create a durable field-update review using displayed field names."""
+        record = self.create_execution_preview("field_updates", {"instance": instance, "jql": jql, "updates": updates, "limit": limit})
+        return {**record["preview"], "preview_id": record["preview_id"]}
 
-    def apply_field_updates(
-        self,
-        instance: str,
-        jql: str,
-        updates: dict[str, Any],
-        limit: int = 500,
-        preview_id: str | None = None,
-    ) -> dict:
-        """Apply a previously previewed reversible field update. Blocked in recommend_only mode."""
-        preview, internal_issues = self._build_field_update_preview(instance, jql, updates, limit)
-        if self.settings.mode == "recommend_only":
-            return {**preview, "applied": False, "reason": "MODE=recommend_only"}
+    def apply_field_updates(self, instance, jql, updates, limit=500, preview_id=None) -> dict:
+        """Apply only the stored field-update review owned by this actor."""
+        return self._apply_public(preview_id, "field_updates", instance, {"jql": jql, "updates": updates, "limit": limit})
+
+    def _apply_public(self, preview_id, action, instance, parameters):
         if not preview_id:
-            return {**preview, "applied": False, "reason": "preview_id is required; run preview_field_updates first"}
-        if preview_id != preview["preview_id"]:
-            return {**preview, "applied": False, "reason": "preview_id does not match the current plan"}
-        if preview["errors"]:
-            return {**preview, "applied": False, "reason": "Resolution errors must be fixed"}
+            return {"applied": False, "reason": "preview_id is required; create and review a preview first"}
+        try:
+            record = self.execution_store.get_record(preview_id).to_dict()
+            if record["action"] != action or record["instance"] != instance:
+                return {"applied": False, "reason": "preview_id does not match the requested action or instance"}
+            for key, value in parameters.items():
+                if record["parameters"].get(key) != value:
+                    return {"applied": False, "reason": "preview_id does not match the requested parameters"}
+            result = self.apply_execution_preview(preview_id, expected_action=action)
+            return {**(result["result"] or {}), "preview_id": preview_id}
+        except KeyError:
+            return {"applied": False, "reason": "preview_id does not match a stored review"}
 
+    def _execute_field_updates(self, record, recovery=False):
+        params, stored = record["parameters"], record["preview"]
+        instance = record["instance"]
+        updates = params.get("updates")
+        if record["action"] == "assign_to_quarter":
+            updates = {self.settings.jira_instances()[instance].quarter_field_name: params["quarter"]}
+        preview, internal = self._build_field_update_preview(instance, params["jql"], updates, int(params.get("limit", 500)))
+        if not recovery and preview["preview_id"] != stored["preview_id"]:
+            return {"applied": False, "reason": "preview_id does not match the current plan"}
+        if preview["errors"] or not internal:
+            return {"applied": False, "reason": "Resolution errors or empty plan"}
         jira = self.client(instance)
         results = []
-        for item in internal_issues:
-            try:
-                jira.update_issue(item["issue_key"], item["fields"])
-                results.append({"issue_key": item["issue_key"], "ok": True})
-            except Exception as exc:
-                results.append({"issue_key": item["issue_key"], "ok": False, "error": str(exc)})
-        return {"applied": bool(results) and all(result["ok"] for result in results), "preview_id": preview["preview_id"], "results": results}
+        # On recovery, retain the original issue set and desired values.
+        originals = {row["issue_key"]: row for row in stored["issues"]}
+        current = {row["issue_key"]: row for row in internal}
+        for key, row in originals.items():
+            if key not in current:
+                raise RecoveryBlocked("A reviewed issue is no longer in query scope")
+            request = {"issue_key": key, "values": updates,
+                       "before": {u["field"]: u["current_value"] for u in row["updates"]}}
+            def update(key=key):
+                jira.update_issue(key, current[key]["fields"])
+                return {"issue_key": key, "ok": True}
+            results.append(run_step(self.execution_store, record["preview_id"], "field:" + key, "field_update", request, update))
+        return {"applied": True, "results": results}
 
-    def assign_to_quarter(
-        self,
-        instance: str,
-        jql: str,
-        quarter: str,
-        dry_run: bool = True,
-        limit: int = 500,
-        preview_id: str | None = None,
-    ) -> dict:
-        """Assign matching work to a displayed Target Quarter value without requiring field or option IDs."""
-        field = self.settings.jira_instances()[instance].quarter_field_name
+    def assign_to_quarter(self, instance, jql, quarter, dry_run=True, limit=500, preview_id=None) -> dict:
+        """Preview or apply quarter assignment using a durable actor-bound review."""
+        params = {"instance": instance, "jql": jql, "quarter": quarter, "limit": limit}
         if dry_run:
-            return self.preview_field_updates(instance, jql, {field: quarter}, limit)
-        return self.apply_field_updates(instance, jql, {field: quarter}, limit, preview_id=preview_id)
+            record = self.create_execution_preview("assign_to_quarter", params)
+            return {**record["preview"], "preview_id": record["preview_id"]}
+        return self._apply_public(preview_id, "assign_to_quarter", instance, {"jql": jql, "quarter": quarter, "limit": limit})
 
     def report_quarter_progress(self, instance: str, quarter: str, jql_extra: str = "", limit: int = 5000) -> dict:
         """Summarize delivery progress for a target quarter."""
@@ -808,7 +828,7 @@ class EngineeringOpsBackend:
         )
         return {"sprint": sprint, "capacity_source": capacity["source"], **analysis}
 
-    def preview_close_sprint(
+    def _build_close_sprint_preview(
         self,
         instance: str,
         sprint_id: int,
@@ -913,6 +933,8 @@ class EngineeringOpsBackend:
             "instance": instance,
             "current_sprint": current_sprint,
             "next_sprint": next_sprint,
+            "connector_version": self._connector_version(instance),
+            "source_versions": {issue["key"]: fingerprint(issue.get("fields") or {}) for issue in current_issues},
             "current_incomplete_issue_keys": [issue["key"] for issue in incomplete],
             "move_issue_keys": move_keys,
             "split_plans": plan_previews,
@@ -923,97 +945,101 @@ class EngineeringOpsBackend:
             "errors": errors,
             "can_apply": self.settings.mode == "approved_destructive" and not unknown and not errors,
         }
+        # Disclose the recovery label as part of the exact reviewed creation plan.
+        seed = _preview_id(preview)
+        for index, plan in enumerate(preview["split_plans"]):
+            plan["recovery_label"] = f"pulse-op-{seed}-{index}"
         return _with_preview_id(preview)
 
-    def apply_close_sprint(
-        self,
-        instance: str,
-        sprint_id: int,
-        next_sprint_id: int,
-        move_issue_keys: list[str] | None = None,
-        split_plans: list[dict[str, Any]] | None = None,
-        rollover_all_incomplete: bool = False,
-        preview_id: str | None = None,
-    ) -> dict:
-        """Execute an explicitly approved sprint-close plan."""
-        preview = self.preview_close_sprint(instance, sprint_id, next_sprint_id, move_issue_keys, split_plans, rollover_all_incomplete)
-        if self.settings.mode != "approved_destructive":
-            return {**preview, "applied": False, "reason": "MODE must be approved_destructive"}
-        if not preview_id:
-            return {**preview, "applied": False, "reason": "preview_id is required; run preview_close_sprint first"}
-        if preview_id != preview["preview_id"]:
-            return {**preview, "applied": False, "reason": "preview_id does not match the current plan"}
-        if not preview["can_apply"]:
-            return {**preview, "applied": False, "reason": "Preview contains blocking errors"}
+    def preview_close_sprint(self, instance, sprint_id, next_sprint_id, move_issue_keys=None, split_plans=None, rollover_all_incomplete=False) -> dict:
+        """Create a durable sprint-close review. Never writes to Jira."""
+        params = {"instance": instance, "sprint_id": sprint_id, "next_sprint_id": next_sprint_id,
+                  "move_issue_keys": move_issue_keys, "split_plans": split_plans,
+                  "rollover_all_incomplete": rollover_all_incomplete}
+        record = self.create_execution_preview("close_sprint", params)
+        return {**record["preview"], "preview_id": record["preview_id"]}
 
+    def apply_close_sprint(self, instance, sprint_id, next_sprint_id, move_issue_keys=None, split_plans=None, rollover_all_incomplete=False, preview_id=None) -> dict:
+        """Apply a previously reviewed durable sprint-close operation."""
+        return self._apply_public(preview_id, "close_sprint", instance, {
+            "sprint_id": sprint_id, "next_sprint_id": next_sprint_id, "move_issue_keys": move_issue_keys,
+            "split_plans": split_plans, "rollover_all_incomplete": rollover_all_incomplete,
+        })
+
+    def _execute_close_sprint(self, record, recovery=False):
+        params, preview = record["parameters"], record["preview"]
+        instance, review_id = record["instance"], record["preview_id"]
+        if not recovery:
+            current = self._build_close_sprint_preview(instance, params["sprint_id"], params["next_sprint_id"],
+                params.get("move_issue_keys"), params.get("split_plans"), params.get("rollover_all_incomplete", False))
+            if current["preview_id"] != preview["preview_id"]:
+                return {"applied": False, "reason": "preview_id does not match the current plan"}
+        if preview["errors"] or preview["unknown_issue_keys"]:
+            return {"applied": False, "reason": "Preview contains blocking errors"}
         jira = self.client(instance)
         points_name, points_id = self._story_points_field(jira)
-        created, transitions = [], []
-        new_issue_keys = []
-        for plan in preview["split_plans"]:
-            source = jira.get_issue(plan["source_issue_key"], ["summary", "description", "issuetype", "project", "parent", points_id or points_name])
-            source_fields = source.get("fields") or {}
-            project_key = (source_fields.get("project") or {}).get("key")
-            issue_type = plan.get("new_issue_type") or (source_fields.get("issuetype") or {}).get("name")
-            fields: dict[str, Any] = {
-                "project": {"key": project_key},
-                "summary": plan["new_summary"],
-                "issuetype": {"name": issue_type},
-                "description": jira.description_value(
-                    plan.get("new_description")
-                    or f"Follow-on work split from {plan['source_issue_key']} during sprint closure."
-                ),
-            }
+        created, transitions, new_keys = [], [], []
+        for index, plan in enumerate(preview["split_plans"]):
+            source = jira.get_issue(plan["source_issue_key"], ["project"])
+            project_key = ((source.get("fields") or {}).get("project") or {}).get("key")
+            marker = plan["recovery_label"]
+            fields = {"project": {"key": project_key}, "summary": plan["new_summary"],
+                "issuetype": {"name": plan["new_issue_type"]}, "labels": [marker],
+                "description": jira.description_value(plan.get("new_description") or f"Follow-on work split from {plan['source_issue_key']} during sprint closure.")}
             if plan.get("parent_key"):
                 fields["parent"] = {"key": plan["parent_key"]}
-            if points_id and plan.get("story_points") is not None:
-                fields[points_id] = float(plan["story_points"])
-            result = jira.create_issue(fields)
-            new_key = result.get("key")
-            created.append({"source_issue_key": plan["source_issue_key"], "new_issue_key": new_key})
-            if not new_key:
-                raise RuntimeError("Split issue creation returned no issue key; sprint closure stopped")
-            if plan.get("will_move_new_issue_to_next_sprint", True):
-                new_issue_keys.append(new_key)
-            transitions.append(jira.transition_issue_to_status(plan["source_issue_key"], plan["source_transition_status"]))
-        all_move = list(dict.fromkeys((preview["move_issue_keys"] or []) + new_issue_keys))
-        moved_batches = jira.move_issues_to_sprint(next_sprint_id, all_move) if all_move else []
-        closed = jira.update_sprint(sprint_id, {"state": "closed"})
-        return {
-            "applied": True,
-            "preview_id": preview["preview_id"],
-            "created_issues": created,
-            "source_transitions": transitions,
-            "moved_to_next_sprint": all_move,
-            "move_batches": moved_batches,
-            "closed_sprint": closed,
-            "next_sprint_capacity": preview["next_sprint_capacity"],
-            "warnings": preview["warnings"],
-        }
+            if points_id:
+                fields[points_id] = plan["story_points"]
+            def create(fields=fields):
+                result = jira.create_issue(fields)
+                if not result.get("key"):
+                    raise RecoveryBlocked("Split creation returned no issue key")
+                return {"key": result["key"]}
+            result = run_step(self.execution_store, review_id, f"create:{index}", "create_issue",
+                {"marker": marker, "summary": plan["new_summary"], "project": project_key}, create)
+            created.append({"source_issue_key": plan["source_issue_key"], "new_issue_key": result["key"]})
+            if plan["will_move_new_issue_to_next_sprint"]:
+                new_keys.append(result["key"])
+            transitions.append(run_step(self.execution_store, review_id, f"transition:{index}", "transition",
+                {"issue_key": plan["source_issue_key"], "status": plan["source_transition_status"]},
+                lambda plan=plan: jira.transition_issue_to_status(plan["source_issue_key"], plan["source_transition_status"])))
+        move = list(dict.fromkeys(preview["move_issue_keys"] + new_keys))
+        batches = []
+        batch_size = min(getattr(self.settings, "bulk_batch_size", 50), 50)
+        for offset in range(0, len(move), batch_size):
+            keys = move[offset:offset + batch_size]
+            batches.extend(run_step(self.execution_store, review_id, f"move:{offset // batch_size}", "move",
+                {"sprint_id": params["next_sprint_id"], "issue_keys": keys},
+                lambda keys=keys: jira.move_issues_to_sprint(params["next_sprint_id"], keys)))
+        closed = run_step(self.execution_store, review_id, "close", "close_sprint", {"sprint_id": params["sprint_id"]},
+            lambda: jira.update_sprint(params["sprint_id"], {"state": "closed"}))
+        return {"applied": True, "created_issues": created, "source_transitions": transitions,
+                "moved_to_next_sprint": move, "move_batches": batches, "closed_sprint": closed,
+                "next_sprint_capacity": preview["next_sprint_capacity"], "warnings": preview["warnings"]}
 
     def create_execution_preview(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
         """Create and store an execution preview for console approve/reject workflows."""
         params = dict(parameters)
+        if action in {"field_updates", "assign_to_quarter"}:
+            params.setdefault("limit", 500)
+        elif action == "close_sprint":
+            for key, default in {"move_issue_keys": None, "split_plans": None, "rollover_all_incomplete": False}.items():
+                params.setdefault(key, default)
         instance = params.get("instance")
         if not instance:
             raise ValueError("instance is required")
         if action == "field_updates":
-            preview = self.preview_field_updates(
+            preview, _ = self._build_field_update_preview(
                 instance,
                 params["jql"],
                 params["updates"],
                 int(params.get("limit", 500)),
             )
         elif action == "assign_to_quarter":
-            preview = self.assign_to_quarter(
-                instance,
-                params["jql"],
-                params["quarter"],
-                dry_run=True,
-                limit=int(params.get("limit", 500)),
-            )
+            field = self.settings.jira_instances()[instance].quarter_field_name
+            preview, _ = self._build_field_update_preview(instance, params["jql"], {field: params["quarter"]}, int(params.get("limit", 500)))
         elif action == "close_sprint":
-            preview = self.preview_close_sprint(
+            preview = self._build_close_sprint_preview(
                 instance,
                 int(params["sprint_id"]),
                 int(params["next_sprint_id"]),
@@ -1044,58 +1070,104 @@ class EngineeringOpsBackend:
         )
         return record
 
-    def apply_execution_preview(self, preview_id: str) -> dict[str, Any]:
-        """Apply a stored preview through the same backend write gates used by MCP."""
+    def apply_execution_preview(self, preview_id, expected_action=None, *, recovery=False, recovery_id=None) -> dict:
+        """Consume an actor/action-bound review, with durable steps before every write."""
         record = self.execution_store.get_record(preview_id).to_dict()
-        if record["action"] == "portfolio_hygiene_fix":
-            self.portfolio_hygiene_apply(preview_id)
-            return self.execution_store.get_record(preview_id).to_dict()
-        record = self.execution_store.begin_apply(preview_id)
+        if expected_action and record["action"] != expected_action:
+            raise ValueError(f"Preview action must be {expected_action}")
+        if record["actor"] != current_actor():
+            raise ValueError("Preview belongs to a different actor")
         action = record["action"]
-        params = record["parameters"]
-        plan_id = record["preview"]["preview_id"]
-        instance = record["instance"]
+        required = "approved_destructive" if action == "close_sprint" else "safe_apply"
+        allowed = self.settings.mode == required or (action in {"field_updates", "assign_to_quarter"} and self.settings.mode == "approved_destructive")
+        if not allowed:
+            reason = "MODE=recommend_only" if self.settings.mode == "recommend_only" and action != "close_sprint" else f"MODE must be {required}"
+            # Reject inappropriate lifecycle states even while writes are disabled.
+            self.execution_store.begin_apply(preview_id, action=action, recovery=recovery)
+            return self.execution_store.mark_applied(preview_id, {"applied": False, "reason": reason})
+        if record["preview"].get("connector_version") != self._connector_version(record["instance"]):
+            raise ValueError("Jira instance configuration changed; review the correct target before applying")
+        if recovery:
+            check = self.reconcile_execution(preview_id)
+            if not recovery_id or check["recovery_id"] != recovery_id or not check["can_resume"]:
+                raise RecoveryBlocked("Recovery review is stale or contains unresolved outcomes")
+        self.execution_store.begin_apply(preview_id, action=action, recovery=recovery)
         try:
-            if action == "field_updates":
-                result = self.apply_field_updates(
-                    instance,
-                    params["jql"],
-                    params["updates"],
-                    int(params.get("limit", 500)),
-                    preview_id=plan_id,
-                )
-            elif action == "assign_to_quarter":
-                result = self.assign_to_quarter(
-                    instance,
-                    params["jql"],
-                    params["quarter"],
-                    dry_run=False,
-                    limit=int(params.get("limit", 500)),
-                    preview_id=plan_id,
-                )
+            if action in {"field_updates", "assign_to_quarter"}:
+                result = self._execute_field_updates(record, recovery)
             elif action == "close_sprint":
-                result = self.apply_close_sprint(
-                    instance,
-                    int(params["sprint_id"]),
-                    int(params["next_sprint_id"]),
-                    params.get("move_issue_keys"),
-                    params.get("split_plans"),
-                    bool(params.get("rollover_all_incomplete", False)),
-                    preview_id=plan_id,
-                )
+                result = self._execute_close_sprint(record, recovery)
+            elif action == "portfolio_hygiene_fix":
+                result = self.portfolio_hygiene_service().execute_record(record)
             else:
                 raise ValueError(f"Unsupported execution action: {action}")
         except Exception as exc:
-            self.execution_store.mark_applied(preview_id, {"applied": False, "reason": str(exc)})
+            self.execution_store.mark_applied(preview_id, {"applied": False, "reason": type(exc).__name__})
             raise
-        updated = self.execution_store.mark_applied(preview_id, result)
-        self.audit_trail.record(
-            "execution_preview_applied",
-            target=action,
-            outcome=updated["status"],
-            details={"preview_id": preview_id, "instance": instance, "error": updated.get("error")},
-        )
-        return updated
+        return self.execution_store.mark_applied(preview_id, result)
+
+    def reconcile_execution(self, preview_id) -> dict:
+        """Observe partial writes in Jira, without making external mutations."""
+        record = self.execution_store.prepare_reconciliation(preview_id)
+        if record["preview"].get("connector_version") != self._connector_version(record["instance"]):
+            raise ValueError("Jira instance configuration changed; do not reconcile against another target")
+        jira = self.client(record["instance"])
+        result = reconcile(self.execution_store, jira, preview_id)
+        # Fingerprint current source state as part of the new recovery review.
+        preview = record["preview"]
+        touched = set()
+        for step in self.execution_store.steps(preview_id):
+            if step["status"] == "succeeded":
+                touched.update(step["request"].get("issue_keys", []))
+                if step["kind"] in {"transition", "date", "labels", "field_update"}:
+                    touched.add(step["request"].get("issue_key"))
+        observations = {}
+        if record["action"] == "close_sprint":
+            current = jira.sprint(record["parameters"]["sprint_id"])
+            target = jira.sprint(record["parameters"]["next_sprint_id"])
+            observations["sprints"] = [current, target]
+            close_done = any(step["kind"] == "close_sprint" and step["status"] == "succeeded" for step in self.execution_store.steps(preview_id))
+            if (not close_done and current.get("state") != "active") or target.get("state") not in {"future", "active"}:
+                result["blocking_steps"].append("sprint-state")
+            _, points_id = self._story_points_field(jira)
+            rows = jira.sprint_issues(record["parameters"]["sprint_id"], story_points_field_id=points_id)
+            versions = {row["key"]: fingerprint(row.get("fields") or {}) for row in rows}
+            observations["source_versions"] = versions
+            if set(versions) - set(preview.get("source_versions", {})):
+                result["blocking_steps"].append("source:unreviewed-issues")
+            target_rows = jira.sprint_issues(record["parameters"]["next_sprint_id"], story_points_field_id=points_id)
+            observations["target_versions"] = {row["key"]: fingerprint(row.get("fields") or {}) for row in target_rows}
+            result["next_sprint_load"] = summarize_capacity(target_rows, jira.cfg.story_points_field_name, points_id)
+            for key, version in preview.get("source_versions", {}).items():
+                if key not in touched and versions.get(key) != version:
+                    result["blocking_steps"].append("source:" + key)
+        elif record["action"] in {"field_updates", "assign_to_quarter"}:
+            for key, version in preview.get("source_versions", {}).items():
+                issue = jira.get_issue(key, None)
+                observations[key] = issue.get("fields") or {}
+                # Individual step reconciliation also checks exact before/after values.
+                if key not in touched and not any(s["request"].get("issue_key") == key for s in record["steps"]):
+                    names = [u["field"] for r in preview["issues"] if r["issue_key"] == key for u in r["updates"]]
+                    ids = {r["name"]: r["id"] for r in jira.fields()}
+                    expected_fields = {name: observations[key].get(name) for name in ["summary", "updated", *[ids[n] for n in names]] if name in observations[key]}
+                    if fingerprint(expected_fields) != version:
+                        result["blocking_steps"].append("source:" + key)
+        else:
+            # Revalidate even changes that failed before their first journal entry.
+            from engineering_ops.services.recovery import observe_step
+            for change in preview.get("changes", []):
+                request, kind = self.portfolio_hygiene_service().change_request(change)
+                observed = observe_step(jira, {"request": request, "kind": kind})
+                observations[change["change_id"]] = observed
+                if observed["state"] not in {"pending", "applied"}:
+                    result["blocking_steps"].append(change["change_id"])
+        result["can_resume"] = not result["blocking_steps"]
+        result["recovery_id"] = fingerprint({"actor": current_actor(), "result": result, "observed": observations})
+        return result
+
+    def resume_execution(self, preview_id, recovery_id) -> dict:
+        """Resume only after a fresh reviewed reconciliation, retaining completed steps."""
+        return self.apply_execution_preview(preview_id, recovery=True, recovery_id=recovery_id)
 
     def reject_execution_preview(self, preview_id: str) -> dict[str, Any]:
         """Reject a stored preview without writing to external systems."""
@@ -1389,7 +1461,11 @@ class EngineeringOpsBackend:
 
     def portfolio_hygiene_apply(self, preview_id: str, allow_parent_changes: bool = False) -> dict[str, Any]:
         """Apply a stored Portfolio Hygiene preview in MODE=safe_apply after source revalidation."""
-        return self.portfolio_hygiene_service().apply(preview_id, allow_parent_changes=allow_parent_changes)
+        # Parent changes remain excluded even when requested.
+        record = self.apply_execution_preview(preview_id, expected_action="portfolio_hygiene_fix")
+        return record["result"]
 
 
-backend = EngineeringOpsBackend()
+# Production workers use the same local database; explicitly injected backends remain isolated.
+_persistent_history = ExecutionHistory(settings.state_db_path)
+backend = EngineeringOpsBackend(execution_store=_persistent_history, audit_trail=AuditTrail(_persistent_history.db))

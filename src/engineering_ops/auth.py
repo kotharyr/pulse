@@ -7,6 +7,8 @@ from starlette.responses import JSONResponse
 
 from mcp.server.auth.provider import AccessToken
 
+from engineering_ops.services.identity import actor_context, token_actor
+
 
 class StaticBearerTokenVerifier:
     """Constant-time verifier for a deployment-managed MCP bearer token."""
@@ -19,7 +21,7 @@ class StaticBearerTokenVerifier:
             return None
         return AccessToken(
             token=token,
-            client_id="engineering-ops-client",
+            client_id=token_actor(self._expected_token),
             scopes=["mcp:tools"],
         )
 
@@ -34,5 +36,6 @@ def protect_http_route(handler, expected_token: str):
                 {"error": "Authentication required"}, status_code=401,
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return await handler(request)
+        with actor_context(token_actor(expected_token)):
+            return await handler(request)
     return authenticated

@@ -1,0 +1,11 @@
+{
+  "name": "pulse-console-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/console.test.cjs",
+    "test:browser": "node tests/browser/acceptance.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

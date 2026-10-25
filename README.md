@@ -273,5 +273,21 @@ console authentication tests.
 Low-level MCP apply tools now require the `preview_id` returned by their matching
 preview tool. They no longer generate approval IDs during apply. Stored workflows
 use the record's top-level `preview_id`; the nested preview ID fingerprints the
-plan and should not be substituted for the stored review ID. Rejected, failed or
-completed stored reviews cannot be replayed; create and review a new preview.
+plan and should not be substituted for the stored review ID. Rejected or completed stored reviews cannot be replayed. A failure before any
+mutation attempt can use a fresh review; partial operations require reconciliation
+and an explicitly reviewed recovery instead of a new apply attempt.
+
+## Persistent approvals and recovery
+
+The production backend stores approvals, audit events and mutation receipts in
+`PULSE_STATE_DB` (default `config/pulse-state.sqlite3`). Use one private local
+database path for all workers. Keep it out of Git and do not delete it to retry
+a partial operation.
+
+After a partial operation, open it in Execution History, select **Reconcile**,
+review the observations, then explicitly select **Resume Reviewed Recovery**.
+MCP clients use `reconcile_execution` followed by `resume_execution` with the
+fresh `recovery_id`. The original actor and normal write mode are required.
+Completed steps are skipped; uncertain creates remain blocked until confirmed.
+See the [P1 safeguards and acceptance runbook](docs/p1-reliability.md) for details,
+read-only deployment probes and the browser test journey.

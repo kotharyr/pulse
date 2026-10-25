@@ -11,6 +11,7 @@ const state = {
   page: 1,
   pageSize: 25,
   currentPreviewId: null,
+  recoveryId: null,
   workflowResult: null,
   savedViews: [],
   jqlTouched: false,
@@ -72,6 +73,8 @@ const els = {
   previewClose: document.getElementById("preview-close"),
   previewStatus: document.getElementById("preview-status"),
   previewOutput: document.getElementById("preview-output"),
+  reconcilePreview: document.getElementById("reconcile-preview"),
+  resumePreview: document.getElementById("resume-preview"),
   rejectPreview: document.getElementById("reject-preview"),
   applyPreview: document.getElementById("apply-preview"),
   history: document.getElementById("execution-history"),
@@ -1365,13 +1368,18 @@ async function loadSprint({auto = false} = {}) {
 }
 
 function renderPreview(record) {
+  state.recoveryId = null;
+  els.resumePreview.disabled = true;
+  els.reconcilePreview.disabled = record.status !== "recovery_required";
   state.currentPreviewId = record.preview_id;
   const preview = record.preview || {};
   els.mode.textContent = preview.mode || els.mode.textContent;
-  els.previewStatus.textContent = preview.can_apply ? "Ready for approval" : "Apply blocked";
+  els.previewStatus.textContent = record.status === "previewed"
+    ? (preview.can_apply ? "Ready for approval" : "Apply blocked")
+    : record.status.replaceAll("_", " ");
   els.previewOutput.textContent = JSON.stringify(record, null, 2);
-  els.rejectPreview.disabled = false;
-  els.applyPreview.disabled = !preview.can_apply;
+  els.rejectPreview.disabled = !["previewed", "failed"].includes(record.status);
+  els.applyPreview.disabled = record.status !== "previewed" || !preview.can_apply;
 }
 
 async function previewCloseSprint() {
@@ -1404,6 +1412,33 @@ async function previewCloseSprint() {
   }
 }
 
+async function reconcilePreview() {
+  if (!state.currentPreviewId) return;
+  state.recoveryId = null;
+  els.resumePreview.disabled = true;
+  try {
+    const review = await api(`/api/executions/${encodeURIComponent(state.currentPreviewId)}/reconcile`, {method: "POST"});
+    els.previewOutput.textContent = JSON.stringify(review, null, 2);
+    els.previewStatus.textContent = review.can_resume ? "Review recovery observations before resuming" : "Recovery blocked: unresolved outcomes";
+    if (review.can_resume) {
+      state.recoveryId = review.recovery_id;
+      els.resumePreview.disabled = false;
+    }
+  } catch (error) { toast(error.message); }
+}
+
+async function resumePreview() {
+  if (!state.currentPreviewId || !state.recoveryId) return;
+  try {
+    els.resumePreview.disabled = true;
+    const record = await api(`/api/executions/${encodeURIComponent(state.currentPreviewId)}/resume`, {
+      method: "POST", body: JSON.stringify({recovery_id: state.recoveryId}),
+    });
+    renderPreview(record);
+    await loadHistory();
+  } catch (error) { state.recoveryId = null; toast(error.message); }
+}
+
 async function applyPreview() {
   if (!state.currentPreviewId) return;
   try {
@@ -1413,6 +1448,7 @@ async function applyPreview() {
     await loadHistory();
   } catch (error) {
     toast(error.message);
+    await loadHistory();
   }
 }
 
@@ -1442,10 +1478,15 @@ async function loadHistory() {
     }
     els.history.innerHTML = rows.map((row) => `
       <div class="history-item">
-        <strong>${escapeHtml(row.action)} | ${escapeHtml(row.status)}</strong>
+        <button type="button" data-execution-id="${escapeHtml(row.preview_id)}">${escapeHtml(row.action)} | ${escapeHtml(row.status)}</button>
         <span class="history-meta">${escapeHtml(row.instance)} | ${escapeHtml(row.preview_id)} | ${escapeHtml(row.updated_at)}</span>
       </div>
     `).join("");
+    els.history.querySelectorAll("[data-execution-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        renderPreview(rows.find((row) => row.preview_id === button.dataset.executionId));
+      });
+    });
     if (els.hygieneHistory) {
       const hygieneRows = rows.filter((row) => row.action === "portfolio_hygiene_fix");
       els.hygieneHistory.innerHTML = hygieneRows.length ? hygieneRows.map((row) => `
@@ -1544,6 +1585,8 @@ function bindEvents() {
   els.previewClose.addEventListener("click", previewCloseSprint);
   els.applyPreview.addEventListener("click", applyPreview);
   els.rejectPreview.addEventListener("click", rejectPreview);
+  els.reconcilePreview.addEventListener("click", reconcilePreview);
+  els.resumePreview.addEventListener("click", resumePreview);
   els.workflowButtons.forEach((button) => {
     button.addEventListener("click", () => runWorkflow(button.dataset.workflow));
   });

@@ -478,6 +478,29 @@ async def api_hygiene_issue(request: Request) -> JSONResponse:
         return _error(str(exc))
 
 
+async def api_execution_reconcile(request: Request) -> JSONResponse:
+    try:
+        result = await anyio.to_thread.run_sync(lambda: backend.reconcile_execution(request.path_params["preview_id"]))
+        return JSONResponse(result)
+    except KeyError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(str(exc))
+
+
+async def api_execution_resume(request: Request) -> JSONResponse:
+    payload = await _payload(request)
+    if not payload.get("recovery_id"):
+        return _error("A reviewed recovery_id is required")
+    try:
+        result = await anyio.to_thread.run_sync(lambda: backend.resume_execution(request.path_params["preview_id"], payload["recovery_id"]))
+        return JSONResponse(result)
+    except KeyError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(str(exc))
+
+
 def console_routes() -> tuple[tuple[str, tuple[str, ...], Any], ...]:
     return (
         ("/console", ("GET",), console_index),
@@ -498,6 +521,8 @@ def console_routes() -> tuple[tuple[str, tuple[str, ...], Any], ...]:
         ("/api/sprint/discovery", ("GET",), api_sprint_discovery),
         ("/api/sprint/analysis", ("GET",), api_sprint_analysis),
         ("/api/executions/preview", ("POST",), api_execution_preview),
+        ("/api/executions/{preview_id}/reconcile", ("POST",), api_execution_reconcile),
+        ("/api/executions/{preview_id}/resume", ("POST",), api_execution_resume),
         ("/api/executions/{preview_id}/apply", ("POST",), api_execution_apply),
         ("/api/executions/{preview_id}/reject", ("POST",), api_execution_reject),
         ("/api/executions", ("GET",), api_execution_history),

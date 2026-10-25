@@ -72,7 +72,7 @@ class FakeOrchestrationBackend:
             },
         }
 
-    def apply_execution_preview(self, preview_id):
+    def apply_execution_preview(self, preview_id, expected_action=None):
         self.calls.append(("apply", preview_id))
         return {
             "preview_id": preview_id,
