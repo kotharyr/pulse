@@ -29,16 +29,22 @@ def run_step(store, preview_id, step_id, kind, request, fn):
 def observe_step(jira, step):
     req, kind = step["request"], step["kind"]
     if kind == "create_issue":
-        rows = jira.search(f'labels = "{req["marker"]}"', ["summary", "project", "labels"], 2)
+        rows = jira.search(f'labels = "{req["marker"]}"', ["summary", "project", "labels", "reporter"], 2)
         if len(rows) == 1:
             fields = rows[0].get("fields") or {}
             if fields.get("summary") == req["summary"] and (fields.get("project") or {}).get("key") == req["project"]:
+                if req.get("reporter_version"):
+                    from engineering_ops.services.executions import fingerprint
+                    # Fetch directly; search indexes can lag behind reporter changes.
+                    user = (jira.get_issue(rows[0]["key"], ["reporter"]).get("fields") or {}).get("reporter") or {}
+                    if fingerprint(jira.reporter_value(user)) != req["reporter_version"]:
+                        return {"state": "conflict", "reason": "Created issue reporter differs from reviewed account"}
                 return {"state": "applied", "value": {"key": rows[0]["key"]}}
         # A missing search result can be indexing delay. Only a prior explicit
         # rejection makes an absent result retryable; ambiguity never does.
         if not rows:
-            return {"state": "absent", "reason": "No split issue is currently visible for the operation marker"}
-        return {"state": "conflict", "reason": "Split creation is not uniquely confirmed by its operation marker"}
+            return {"state": "absent", "reason": "No created issue is currently visible for the operation marker"}
+        return {"state": "conflict", "reason": "Issue creation is not uniquely confirmed by its operation marker"}
     if kind == "transition":
         issue = jira.get_issue(req["issue_key"], ["status"])
         status = (issue.get("fields") or {}).get("status") or {}

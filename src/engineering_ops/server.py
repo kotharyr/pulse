@@ -17,6 +17,7 @@ from engineering_ops.backend import backend
 from engineering_ops.config import settings, validate_startup_configuration
 from engineering_ops.plugins import CapabilityPlugin, PluginRegistry
 from engineering_ops.runtime import close_clients
+from engineering_ops.services.issue_creation import IssueDraft
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("engineering_ops")
@@ -49,6 +50,22 @@ delete_operational_view = backend.delete_operational_view
 portfolio_hygiene_review_backend = backend.portfolio_hygiene_review
 portfolio_hygiene_preview_fix_backend = backend.portfolio_hygiene_preview_fix
 portfolio_hygiene_apply_backend = backend.portfolio_hygiene_apply
+
+
+def get_issue_creation_context(instance: str, project: str | None = None, issue_type: str = "Story") -> dict:
+    """Read available creation fields and the connected Jira reporter. Choose an instance explicitly; use list_jira_instances and find_project_by_name to resolve names."""
+    return backend.get_issue_creation_context(instance, project, issue_type)
+
+
+def preview_create_issue(instance: str, draft: IssueDraft, project: str | None = None,
+                         issue_type: str = "Story", additional_fields: dict[str, Any] | None = None) -> dict:
+    """Draft a new Jira issue from Chat without writing. Use Summary, User Story, Description, Acceptance Criteria, Dependencies, Out of Scope and Business Value. Ask for missing facts; do not invent requirements. Show the complete stored preview including instance, project and reporter, and obtain user approval before apply_create_issue. Reporter is the selected connection's authenticated Jira account. Additional fields use human names/values from get_issue_creation_context."""
+    return backend.preview_create_issue(instance, draft.model_dump(), project, issue_type, additional_fields)
+
+
+def apply_create_issue(preview_id: str) -> dict:
+    """Create exactly the issue in a reviewed preview after explicit user approval. Requires MODE=safe_apply; recommend_only blocks creation. Never blindly retry an uncertain result: use reconcile_execution."""
+    return backend.apply_create_issue(preview_id)
 
 
 def engineering_review(
@@ -339,6 +356,9 @@ def build_plugin_registry() -> PluginRegistry:
     registry.add(CapabilityPlugin(
         name="jira",
         tools=(
+            get_issue_creation_context,
+            preview_create_issue,
+            apply_create_issue,
             engineering_review,
             sprint_analysis,
             sprint_close_preview,

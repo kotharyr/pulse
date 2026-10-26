@@ -291,3 +291,7 @@ fresh `recovery_id`. The original actor and normal write mode are required.
 Completed steps are skipped; uncertain creates remain blocked until confirmed.
 See the [P1 safeguards and acceptance runbook](docs/p1-reliability.md) for details,
 read-only deployment probes and the browser test journey.
+
+## Create Jira issues from Chat
+
+Draft an issue in a selected Jira instance and project with a reviewed Summary, User Story, Description, Acceptance Criteria, Dependencies, Out of Scope and Business Value. The connected Jira account is explicitly used as reporter. Creation requires a stored approved preview and `MODE=safe_apply`; the default remains `recommend_only`. See [Chat issue creation](docs/chat-issue-creation.md) for tools, reporter identity, required fields and recovery.

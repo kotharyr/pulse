@@ -101,6 +101,8 @@ class ExecutionHistory:
     def resources(self, record):
         params, preview = record["parameters"], record["preview"]
         resources = ["operation:" + record["operation_key"]]
+        if record["action"] == "create_issue":
+            resources.append("operation:create:" + preview["recovery_label"])
         if record["action"] == "close_sprint":
             resources += [f"{record['instance']}:sprint:{params[key]}" for key in ("sprint_id", "next_sprint_id")]
         keys = [item.get("issue_key") for item in preview.get("issues", [])]

@@ -1017,6 +1017,20 @@ class EngineeringOpsBackend:
                 "moved_to_next_sprint": move, "move_batches": batches, "closed_sprint": closed,
                 "next_sprint_capacity": preview["next_sprint_capacity"], "warnings": preview["warnings"]}
 
+    def get_issue_creation_context(self, instance: str, project: str | None = None, issue_type: str = "Story") -> dict:
+        """Read creation fields and authenticated reporter for the selected instance/project."""
+        from engineering_ops.services.issue_creation import public_context
+        return {"instance": instance, **public_context(self.client(instance), project, issue_type)}
+
+    def preview_create_issue(self, instance: str, draft: dict, project: str | None = None,
+                             issue_type: str = "Story", additional_fields: dict | None = None) -> dict:
+        """Store a human-readable review; never create an issue here."""
+        return self.create_execution_preview("create_issue", {"instance": instance, "project": project,
+            "issue_type": issue_type, "draft": draft, "additional_fields": additional_fields or {}})
+
+    def apply_create_issue(self, preview_id: str) -> dict:
+        return self.apply_execution_preview(preview_id, expected_action="create_issue")
+
     def create_execution_preview(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
         """Create and store an execution preview for console approve/reject workflows."""
         params = dict(parameters)
@@ -1028,7 +1042,10 @@ class EngineeringOpsBackend:
         instance = params.get("instance")
         if not instance:
             raise ValueError("instance is required")
-        if action == "field_updates":
+        if action == "create_issue":
+            from engineering_ops.services.issue_creation import prepare
+            preview, _ = prepare(self.client(instance), params, self._connector_version(instance))
+        elif action == "field_updates":
             preview, _ = self._build_field_update_preview(
                 instance,
                 params["jql"],
@@ -1095,6 +1112,9 @@ class EngineeringOpsBackend:
         try:
             if action in {"field_updates", "assign_to_quarter"}:
                 result = self._execute_field_updates(record, recovery)
+            elif action == "create_issue":
+                from engineering_ops.services.issue_creation import execute
+                result = execute(self, record, recovery)
             elif action == "close_sprint":
                 result = self._execute_close_sprint(record, recovery)
             elif action == "portfolio_hygiene_fix":
@@ -1152,6 +1172,16 @@ class EngineeringOpsBackend:
                     expected_fields = {name: observations[key].get(name) for name in ["summary", "updated", *[ids[n] for n in names]] if name in observations[key]}
                     if fingerprint(expected_fields) != version:
                         result["blocking_steps"].append("source:" + key)
+        elif record["action"] == "create_issue":
+            from engineering_ops.services.issue_creation import prepare
+            try:
+                current, _ = prepare(jira, record["parameters"], self._connector_version(record["instance"]))
+                observations["creation"] = current
+                if fingerprint(current) != fingerprint(preview):
+                    result["blocking_steps"].append("creation:stale")
+            except Exception as exc:
+                observations["creation_error"] = type(exc).__name__
+                result["blocking_steps"].append("creation:unavailable")
         else:
             # Revalidate even changes that failed before their first journal entry.
             from engineering_ops.services.recovery import observe_step
