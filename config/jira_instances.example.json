@@ -1,0 +1,38 @@
+{
+  "cloud": {
+    "type": "cloud",
+    "base_url": "https://example.atlassian.net",
+    "credentials": "cloud",
+    "default_project": "PLAT",
+    "quarter_field_name": "Target Quarter",
+    "story_points_field_name": "Story Points",
+    "team_field_name": "Team",
+    "pt_field_name": "PT",
+    "team_pt_field_name": "Team/PT",
+    "start_date_field_name": "Start date",
+    "end_date_field_name": "End date",
+    "hierarchy_field_names": ["Parent Link", "Epic Link"],
+    "default_board_id": 1,
+    "sprint_capacity_points": 50,
+    "sprint_capacity_buffer_percent": 10,
+    "verify_ssl": true
+  },
+  "onprem": {
+    "type": "datacenter",
+    "base_url": "https://jira.internal.example.com",
+    "credentials": "onprem",
+    "default_project": "ENG",
+    "quarter_field_name": "Target Quarter",
+    "story_points_field_name": "Story Points",
+    "team_field_name": "Team",
+    "pt_field_name": "PT",
+    "team_pt_field_name": "Team/PT",
+    "start_date_field_name": "Start date",
+    "end_date_field_name": "End date",
+    "hierarchy_field_names": ["Parent Link", "Epic Link"],
+    "default_board_id": 22,
+    "sprint_capacity_points": 45,
+    "sprint_capacity_buffer_percent": 10,
+    "verify_ssl": true
+  }
+}

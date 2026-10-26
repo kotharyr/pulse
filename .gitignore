@@ -1,1 +1,12 @@
 .DS_Store
+
+.pulse-local/
+.env
+.env.local
+.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+.acceptance-results/
+*.egg-info/
