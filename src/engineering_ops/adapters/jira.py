@@ -7,6 +7,11 @@ from typing import Any, Protocol
 import httpx
 
 from engineering_ops.config import JiraInstanceConfig, ResolvedCredential, resolve_credentials, settings
+from engineering_ops.issue_creation_models import (
+    CreationMetadata,
+    DescriptionSection,
+    ReporterIdentity,
+)
 
 
 class JiraError(RuntimeError):
@@ -322,16 +327,16 @@ class JiraClient:
     def update_issue_operations(self, key: str, update: dict[str, Any]):
         return self.request("PUT", f"/rest/api/{self.platform_api_version}/issue/{key}", json={"update": update})
 
-    def creation_metadata(self, project: str, issue_type: str) -> dict:
+    def creation_metadata(self, project: str, issue_type: str) -> CreationMetadata:
         from engineering_ops.adapters.issue_creation import creation_metadata
         return creation_metadata(self, project, issue_type)
 
-    def reporter_value(self, user: dict) -> dict:
+    def reporter_value(self, user: dict[str, Any]) -> ReporterIdentity:
         from engineering_ops.adapters.issue_creation import reporter_value
         return reporter_value(self, user)
 
-    def formatted_description(self, sections: list) -> Any:
-        from engineering_ops.adapters.issue_creation import formatted_description
+    def formatted_description(self, sections: list[DescriptionSection]) -> Any:
+        from engineering_ops.adapters.issue_descriptions import formatted_description
         return formatted_description(self, sections)
 
     def create_issue(self, fields: dict[str, Any]):

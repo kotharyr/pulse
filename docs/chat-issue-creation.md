@@ -80,3 +80,22 @@ The console API supports `POST /api/executions/preview` with `action: "create_is
 Automated tests in `tests/test_issue_creation.py` cover Cloud/DC serialization and reporter identities, metadata pagination and legacy Server fallback, missing required fields, explicit target selection, mode and actor checks, stale approvals, duplicate prevention across store reopen, uncertain outcomes, reporter readback failures, rejected-create recovery, and authenticated MCP/REST integration. Tests use fake Jira responses; no live creation is performed.
 
 API references: [Atlassian Cloud issue creation and create metadata](https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/) and [Atlassian Data Center/Server REST examples](https://developer.atlassian.com/server/jira/platform/jira-rest-api-examples/).
+
+## Maintaining this workflow
+
+`issue_creation_models.py` defines the validated Chat draft, creation metadata,
+parameters and preview contracts. `CreationContext` and `PreparedCreation` name
+intermediate results; dictionaries at the Jira and persistence boundaries retain
+their existing JSON shape.
+
+`services/issue_creation.py` coordinates context loading, field construction,
+preview preparation and journaled creation. `services/creation_fields.py` owns
+create-screen requirements and human-name/value resolution.
+`services/issue_validation.py` shares preview comparison and direct reporter
+readback between creation and recovery. The adapter's `issue_creation.py` reads
+metadata, while `issue_descriptions.py` renders the template for each platform.
+
+Keep fingerprints and serialized previews compatible when refactoring: durable
+approvals and recovery labels depend on them. Tests retain representative Cloud
+and Data Center fingerprints from the original implementation, alongside the
+mode, actor, stale-review and recovery checks.

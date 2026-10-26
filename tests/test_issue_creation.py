@@ -24,7 +24,6 @@ HEADINGS = ["Summary", "User Story", "Description", "Acceptance Criteria", "Depe
 
 
 class CreationJira:
-    creation_metadata = lambda self, project, issue_type: deepcopy({**self.meta, "project": project})
     reporter_value = reporter_value
     formatted_description = formatted_description
 
@@ -39,6 +38,9 @@ class CreationJira:
         self.failure = None
         self.reporter_override = None
         self.read_error = None
+
+    def creation_metadata(self, project, issue_type):
+        return deepcopy({**self.meta, "project": project})
 
     def myself(self):
         return deepcopy(self.user)
@@ -332,4 +334,120 @@ def test_authenticated_mcp_creation_and_console_share_approvals(monkeypatch, tmp
                                json={"action": "create_issue", "parameters": {"instance": "edge", "draft": revised}})
         assert response.status_code == 201
         assert response.json()["action"] == "create_issue"
+    assert len(jira.created) == 1
+
+
+@pytest.mark.parametrize("version,expected_fingerprint", [
+    ("3", "be877c0612eecfc50cecca64cf7b702b6b446c34d574414288d17ef0b6ed46ab"),
+    ("2", "1ee0cc166f283d0add35f046fc93aaaa379f6a3eb15bc878480fd7fab69fa671"),
+])
+def test_refactor_preserves_stored_approval_fingerprints(tmp_path, version, expected_fingerprint):
+    # Captured from commit d50da3a before refactoring. Changing these hashes would
+    # invalidate an already-reviewed draft even though its intended write is unchanged.
+    from engineering_ops.services.executions import fingerprint
+
+    backend, jira = make_backend(tmp_path, CreationJira(version))
+    record = preview(backend)
+    assert fingerprint(record["preview"]) == expected_fingerprint
+    backend.apply_create_issue(record["preview_id"])
+    assert len(jira.created) == 1
+
+
+@pytest.mark.parametrize("schema,allowed,value,expected", [
+    ({"type": "string"}, [], "amber", "amber"),
+    ({"type": "number"}, [], 900, 900),
+    ({"type": "number"}, [], 1.5, 1.5),
+    ({"type": "array", "items": "string"}, [], ["edge", "amber"], ["edge", "amber"]),
+    (
+        {"type": "array"},
+        [{"id": "1", "name": "Amber"}, {"id": "2", "name": "Blue"}],
+        ["amber", "Blue"],
+        [{"id": "1"}, {"id": "2"}],
+    ),
+])
+def test_additional_field_payloads_keep_supported_values(tmp_path, schema, allowed, value, expected):
+    backend, jira = make_backend(tmp_path)
+    jira.meta["fields"]["customfield_123"] = {
+        "name": "Environment", "required": True, "schema": schema,
+        "allowedValues": allowed,
+    }
+    record = preview(backend, additional_fields={"Environment": value})
+    backend.apply_create_issue(record["preview_id"])
+    assert jira.created[0]["customfield_123"] == expected
+
+
+@pytest.mark.parametrize("schema,allowed,value", [
+    ({"type": "number"}, [], True),
+    ({"type": "number"}, [], float("nan")),
+    ({"type": "number"}, [], float("inf")),
+    ({"type": "string", "custom": "jira:textarea"}, [], "Rich text"),
+    ({"type": "array", "items": "string"}, [], []),
+    ({"type": "array", "items": "string"}, [], [" "]),
+    ({"type": "array"}, [{"id": "1", "name": "Amber"}], "Amber"),
+    ({"type": "option"}, [{"name": "Amber"}], "Amber"),
+    (
+        {"type": "option"},
+        [{"id": "1", "name": "Amber"}, {"id": "2", "name": "Amber"}],
+        "Amber",
+    ),
+])
+def test_unsupported_additional_values_never_reach_jira(tmp_path, schema, allowed, value):
+    backend, jira = make_backend(tmp_path)
+    jira.meta["fields"]["customfield_123"] = {
+        "name": "Environment", "schema": schema, "allowedValues": allowed,
+    }
+    with pytest.raises(ValueError):
+        preview(backend, additional_fields={"Environment": value})
+    assert not jira.created
+
+
+@pytest.mark.parametrize("reason", ["ambiguous", "read_only"])
+def test_ambiguous_or_readonly_creation_fields_block_preview(tmp_path, reason):
+    backend, jira = make_backend(tmp_path)
+    field = {"name": "Environment", "schema": {"type": "string"}}
+    jira.meta["fields"]["customfield_123"] = field
+    if reason == "ambiguous":
+        jira.meta["fields"]["customfield_124"] = deepcopy(field)
+    else:
+        field["operations"] = []
+    with pytest.raises(ValueError):
+        preview(backend, additional_fields={"Environment": "Amber"})
+    assert not jira.created
+
+
+def test_creation_field_with_default_does_not_require_override(tmp_path):
+    backend, jira = make_backend(tmp_path)
+    jira.meta["fields"]["customfield_123"] = {
+        "name": "Environment", "required": True, "hasDefaultValue": True,
+        "schema": {"type": "string"},
+    }
+    backend.apply_create_issue(preview(backend)["preview_id"])
+    assert "customfield_123" not in jira.created[0]
+
+
+def test_recovery_blocks_changed_create_metadata(tmp_path):
+    backend, jira = make_backend(tmp_path)
+    record = preview(backend)
+    jira.failure = "timeout"
+    with pytest.raises(TimeoutError):
+        backend.apply_create_issue(record["preview_id"])
+    jira.meta["fields"]["summary"]["required"] = False
+    review = backend.reconcile_execution(record["preview_id"])
+    assert "creation:stale" in review["blocking_steps"]
+    with pytest.raises(RecoveryBlocked):
+        backend.resume_execution(record["preview_id"], review["recovery_id"])
+    assert len(jira.created) == 1
+
+
+@pytest.mark.parametrize("version", ["3", "2"])
+def test_unreadable_reporter_identity_stays_uncertain_during_recovery(tmp_path, version):
+    backend, jira = make_backend(tmp_path, CreationJira(version))
+    record = preview(backend)
+    # A successful POST with an unusable reporter response must remain uncertain.
+    jira.reporter_override = {"displayName": "No stable identity"}
+    with pytest.raises(RecoveryBlocked):
+        backend.apply_create_issue(record["preview_id"])
+    steps = backend.execution_store.steps(record["preview_id"])
+    assert steps[0]["status"] == "uncertain"
+    assert not backend.reconcile_execution(record["preview_id"])["can_resume"]
     assert len(jira.created) == 1

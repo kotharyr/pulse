@@ -1,5 +1,6 @@
 """Write-ahead mutation receipts and read-only reconciliation. Never retry a blind create."""
 from engineering_ops.adapters.jira import JiraError
+from engineering_ops.services.issue_validation import reporter_matches
 
 
 class RecoveryBlocked(ValueError):
@@ -34,10 +35,7 @@ def observe_step(jira, step):
             fields = rows[0].get("fields") or {}
             if fields.get("summary") == req["summary"] and (fields.get("project") or {}).get("key") == req["project"]:
                 if req.get("reporter_version"):
-                    from engineering_ops.services.executions import fingerprint
-                    # Fetch directly; search indexes can lag behind reporter changes.
-                    user = (jira.get_issue(rows[0]["key"], ["reporter"]).get("fields") or {}).get("reporter") or {}
-                    if fingerprint(jira.reporter_value(user)) != req["reporter_version"]:
+                    if not reporter_matches(jira, rows[0]["key"], req["reporter_version"]):
                         return {"state": "conflict", "reason": "Created issue reporter differs from reviewed account"}
                 return {"state": "applied", "value": {"key": rows[0]["key"]}}
         # A missing search result can be indexing delay. Only a prior explicit

@@ -10,11 +10,17 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from statistics import mean
 from time import monotonic
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from engineering_ops.adapters.jira import JiraClient
 from engineering_ops.config import Settings, configuration_report, settings
+from engineering_ops.issue_creation_models import (
+    CreationParameters,
+    CreationPreview,
+    CreationRecord,
+)
 from engineering_ops.runtime import client as default_client
+from engineering_ops.services import issue_creation
 from engineering_ops.services.audit import AuditTrail
 from engineering_ops.services.environment import (
     EnvironmentCache,
@@ -28,6 +34,7 @@ from engineering_ops.services.health import engineering_health as health_summary
 from engineering_ops.services.executions import ExecutionHistory, fingerprint
 from engineering_ops.services.recovery import run_step, reconcile, RecoveryBlocked
 from engineering_ops.services.identity import current_actor
+from engineering_ops.services.issue_validation import preview_matches
 from engineering_ops.services.orchestration import EngineeringOrchestrator
 from engineering_ops.services.platform import PlatformDiagnostics
 from engineering_ops.services.portfolio_hygiene import PortfolioHygieneService
@@ -1017,18 +1024,32 @@ class EngineeringOpsBackend:
                 "moved_to_next_sprint": move, "move_batches": batches, "closed_sprint": closed,
                 "next_sprint_capacity": preview["next_sprint_capacity"], "warnings": preview["warnings"]}
 
-    def get_issue_creation_context(self, instance: str, project: str | None = None, issue_type: str = "Story") -> dict:
-        """Read creation fields and authenticated reporter for the selected instance/project."""
-        from engineering_ops.services.issue_creation import public_context
-        return {"instance": instance, **public_context(self.client(instance), project, issue_type)}
+    def get_issue_creation_context(
+        self, instance: str, project: str | None = None, issue_type: str = "Story"
+    ) -> dict[str, Any]:
+        """Read creation fields and authenticated reporter for the selected target."""
+        context = issue_creation.public_context(self.client(instance), project, issue_type)
+        return {"instance": instance, **context}
 
-    def preview_create_issue(self, instance: str, draft: dict, project: str | None = None,
-                             issue_type: str = "Story", additional_fields: dict | None = None) -> dict:
+    def preview_create_issue(
+        self,
+        instance: str,
+        draft: dict[str, Any],
+        project: str | None = None,
+        issue_type: str = "Story",
+        additional_fields: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Store a human-readable review; never create an issue here."""
-        return self.create_execution_preview("create_issue", {"instance": instance, "project": project,
-            "issue_type": issue_type, "draft": draft, "additional_fields": additional_fields or {}})
+        parameters: CreationParameters = {
+            "instance": instance,
+            "project": project,
+            "issue_type": issue_type,
+            "draft": draft,
+            "additional_fields": additional_fields or {},
+        }
+        return self.create_execution_preview("create_issue", dict(parameters))
 
-    def apply_create_issue(self, preview_id: str) -> dict:
+    def apply_create_issue(self, preview_id: str) -> dict[str, Any]:
         return self.apply_execution_preview(preview_id, expected_action="create_issue")
 
     def create_execution_preview(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
@@ -1043,8 +1064,12 @@ class EngineeringOpsBackend:
         if not instance:
             raise ValueError("instance is required")
         if action == "create_issue":
-            from engineering_ops.services.issue_creation import prepare
-            preview, _ = prepare(self.client(instance), params, self._connector_version(instance))
+            prepared = issue_creation.prepare(
+                self.client(instance),
+                cast(CreationParameters, params),
+                self._connector_version(instance),
+            )
+            preview = prepared.preview
         elif action == "field_updates":
             preview, _ = self._build_field_update_preview(
                 instance,
@@ -1113,8 +1138,7 @@ class EngineeringOpsBackend:
             if action in {"field_updates", "assign_to_quarter"}:
                 result = self._execute_field_updates(record, recovery)
             elif action == "create_issue":
-                from engineering_ops.services.issue_creation import execute
-                result = execute(self, record, recovery)
+                result = issue_creation.execute(self, cast(CreationRecord, record))
             elif action == "close_sprint":
                 result = self._execute_close_sprint(record, recovery)
             elif action == "portfolio_hygiene_fix":
@@ -1173,11 +1197,14 @@ class EngineeringOpsBackend:
                     if fingerprint(expected_fields) != version:
                         result["blocking_steps"].append("source:" + key)
         elif record["action"] == "create_issue":
-            from engineering_ops.services.issue_creation import prepare
             try:
-                current, _ = prepare(jira, record["parameters"], self._connector_version(record["instance"]))
-                observations["creation"] = current
-                if fingerprint(current) != fingerprint(preview):
+                prepared = issue_creation.prepare(
+                    jira,
+                    cast(CreationParameters, record["parameters"]),
+                    self._connector_version(record["instance"]),
+                )
+                observations["creation"] = prepared.preview
+                if not preview_matches(prepared.preview, cast(CreationPreview, preview)):
                     result["blocking_steps"].append("creation:stale")
             except Exception as exc:
                 observations["creation_error"] = type(exc).__name__
