@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "driver": "in-app browser UI automation",
+  "automated_playwright_harness_run": false,
+  "playwright_harness_limitation": "Host sandbox prevented standalone Chrome launch",
+  "mode": "recommend_only",
+  "external_jira_mutations": 0,
+  "checks": [
+    "Token entry and reconnect",
+    "Engineering review renders",
+    "Sprint preview renders with Apply disabled",
+    "Preview rejection persists in UI"
+  ]
+}

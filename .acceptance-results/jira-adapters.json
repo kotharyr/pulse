@@ -1,0 +1,72 @@
+{
+  "checked_at": "2026-10-25T23:29:49.394581+00:00",
+  "mode": "recommend_only",
+  "mutations_attempted": 0,
+  "instances": [
+    {
+      "instance": "cloud",
+      "type": "cloud",
+      "passed": true,
+      "checks": [
+        {
+          "check": "authentication",
+          "passed": true,
+          "count": null
+        },
+        {
+          "check": "fields",
+          "passed": true,
+          "count": 1633
+        },
+        {
+          "check": "projects",
+          "passed": true,
+          "count": 5
+        },
+        {
+          "check": "boards",
+          "passed": true,
+          "count": 5
+        },
+        {
+          "check": "sample_health_report",
+          "passed": true,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "instance": "onprem",
+      "type": "datacenter",
+      "passed": true,
+      "checks": [
+        {
+          "check": "authentication",
+          "passed": true,
+          "count": null
+        },
+        {
+          "check": "fields",
+          "passed": true,
+          "count": 789
+        },
+        {
+          "check": "projects",
+          "passed": true,
+          "count": 5
+        },
+        {
+          "check": "boards",
+          "passed": true,
+          "count": 5
+        },
+        {
+          "check": "sample_health_report",
+          "passed": true,
+          "count": 5
+        }
+      ]
+    }
+  ],
+  "passed": true
+}
