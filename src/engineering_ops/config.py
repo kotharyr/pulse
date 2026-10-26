@@ -3,12 +3,19 @@ from __future__ import annotations
 import json
 import os
 import re
+<<<<<<< HEAD
 from datetime import date
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 from pathlib import Path
 from typing import Any, Literal
 
 from dotenv import dotenv_values
+<<<<<<< HEAD
 from pydantic import BaseModel, Field, field_validator, model_validator
+=======
+from pydantic import BaseModel, Field, model_validator
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -56,12 +63,15 @@ class JiraInstanceConfig(BaseModel):
     default_project: str | None = None
     quarter_field_name: str = "Target Quarter"
     story_points_field_name: str = "Story Points"
+<<<<<<< HEAD
     team_field_name: str = "Team"
     pt_field_name: str = "PT"
     team_pt_field_name: str = "Team/PT"
     start_date_field_name: str = "Start date"
     end_date_field_name: str = "End date"
     hierarchy_field_names: list[str] = Field(default_factory=lambda: ["Parent Link", "Epic Link"])
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
     default_board_id: int | None = None
     sprint_capacity_points: float | None = None
     sprint_capacity_issue_count: int | None = None
@@ -73,7 +83,11 @@ class JiraInstanceConfig(BaseModel):
     legacy_auth: LegacyAuthConfig | None = Field(default=None, alias="auth", exclude=True)
     legacy_api_version: str | None = Field(default=None, alias="api_version", exclude=True)
 
+<<<<<<< HEAD
     model_config = {"populate_by_name": True, "extra": "forbid"}
+=======
+    model_config = {"populate_by_name": True, "extra": "ignore"}
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
     @model_validator(mode="before")
     @classmethod
@@ -86,6 +100,7 @@ class JiraInstanceConfig(BaseModel):
     @model_validator(mode="after")
     def clean(self) -> "JiraInstanceConfig":
         self.base_url = self.base_url.rstrip("/")
+<<<<<<< HEAD
         if not self.base_url.startswith(("https://", "http://")):
             raise ValueError("base_url must use http:// or https://")
         if self.sprint_capacity_points is not None and self.sprint_capacity_points <= 0:
@@ -94,6 +109,8 @@ class JiraInstanceConfig(BaseModel):
             raise ValueError("sprint_capacity_issue_count must be greater than zero")
         if not 0 <= self.sprint_capacity_buffer_percent < 100:
             raise ValueError("sprint_capacity_buffer_percent must be between 0 and 100")
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
         if not self.credentials:
             # Credential reference defaults to instance name later in Settings.jira_instances().
             self.credentials = None
@@ -110,6 +127,7 @@ class JiraInstanceConfig(BaseModel):
         return "3" if self.instance_type == "cloud" else "2"
 
 
+<<<<<<< HEAD
 class FiscalQuarterConfig(BaseModel):
     start: date
     end: date
@@ -121,6 +139,8 @@ class FiscalQuarterConfig(BaseModel):
         return self
 
 
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 class ResolvedCredential(BaseModel):
     method: Literal["cloud_api_token", "personal_access_token", "basic_fallback", "legacy"]
     username: str | None = None
@@ -129,6 +149,7 @@ class ResolvedCredential(BaseModel):
 
 
 class Settings(BaseSettings):
+<<<<<<< HEAD
     state_db_file: str = Field("config/pulse-state.sqlite3", alias="PULSE_STATE_DB")
     model_config = SettingsConfigDict(env_file=None, extra="ignore", populate_by_name=True)
 
@@ -217,6 +238,20 @@ class Settings(BaseSettings):
     def state_db_path(self) -> Path:
         path = Path(self.state_db_file).expanduser()
         return path.resolve() if path.is_absolute() else (PROJECT_ROOT / path).resolve()
+=======
+    model_config = SettingsConfigDict(env_file=None, extra="ignore", populate_by_name=True)
+
+    mode: Literal["recommend_only", "safe_apply", "approved_destructive"] = Field("recommend_only", alias="MODE")
+    mcp_host: str = Field("0.0.0.0", alias="MCP_HOST")
+    mcp_port: int = Field(8080, alias="MCP_PORT")
+    mcp_bearer_token: str | None = Field(None, alias="MCP_BEARER_TOKEN")
+    jira_instances_file: str = Field("config/jira_instances.json", alias="JIRA_INSTANCES_FILE")
+    request_timeout_seconds: float = Field(60, alias="REQUEST_TIMEOUT_SECONDS")
+    max_search_results: int = Field(5000, alias="MAX_SEARCH_RESULTS")
+    bulk_batch_size: int = Field(500, alias="BULK_BATCH_SIZE")
+    local_repo_root: str | None = Field(None, alias="LOCAL_REPO_ROOT")
+    security_issue_summary_marker: str = Field("Operational Security Issue", alias="SECURITY_ISSUE_SUMMARY_MARKER")
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
     @property
     def jira_instances_path(self) -> Path:
@@ -372,6 +407,7 @@ def configuration_report() -> dict[str, Any]:
         warnings.append(
             f"No .env or .env.local file was found under project root {PROJECT_ROOT}; only process environment variables are available."
         )
+<<<<<<< HEAD
     if settings.bulk_batch_size > 50:
         warnings.append(
             f"BULK_BATCH_SIZE={settings.bulk_batch_size} exceeds Jira's limit and will be capped at 50."
@@ -384,12 +420,15 @@ def configuration_report() -> dict[str, Any]:
         warnings.append("MCP bearer authentication is disabled for loopback-only development.")
     if settings.mcp_host not in loopback_hosts and not settings.mcp_public_url:
         warnings.append("MCP_PUBLIC_URL should be set for correct deployed authentication metadata.")
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
     return {
         "ok": not errors,
         "project_root": str(PROJECT_ROOT),
         "loaded_env_files": LOADED_ENV_FILES,
         "mode": settings.mode,
+<<<<<<< HEAD
         "fiscal_calendar": {
             name: {"start": cfg.start.isoformat(), "end": cfg.end.isoformat()}
             for name, cfg in settings.fiscal_calendar.items()
@@ -407,6 +446,9 @@ def configuration_report() -> dict[str, Any]:
             "port": settings.mcp_port,
             "authentication_required": bool(settings.mcp_bearer_token),
         },
+=======
+        "mcp": {"host": settings.mcp_host, "port": settings.mcp_port},
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
         "jira_instances_file": str(settings.jira_instances_path),
         "instances": instances_report,
         "local_repo_root": str(repo_path) if repo_path else None,

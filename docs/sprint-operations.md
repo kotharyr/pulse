@@ -13,6 +13,7 @@ Sprint closure is a workflow, not a single API call. The assistant first creates
 5. Run `preview_close_sprint`.
 6. Review the overcommit warning and every source transition/new issue.
 7. If necessary, remove/defer work from the next sprint and preview again.
+<<<<<<< HEAD
 8. Only then run `apply_close_sprint` with that preview's `preview_id`.
 
 For the stored workflow, use `sprint_close_preview`, review the result, and pass
@@ -21,6 +22,9 @@ rejected or consumed reviews cannot be replayed. Sprint states and source data
 are checked again on apply. Split source transitions must target Jira's Done
 status category. A multi-step failure can leave partial changes, so reconcile
 Jira state before creating and reviewing another plan.
+=======
+8. Only then run `apply_close_sprint`.
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
 ## Split plan structure
 
@@ -63,6 +67,7 @@ NEXT SPRINT IS PROJECTED TO BE OVERCOMMITTED
 ```
 
 The warning does not automatically remove work. ChatGPT can then help decide what to defer.
+<<<<<<< HEAD
 
 ## Partial execution recovery
 
@@ -73,3 +78,5 @@ review the result, and pass its fresh `recovery_id` to `resume_execution`.
 Pulse skips confirmed steps and blocks uncertain creates, changed source scope
 and active workers. Recovery still requires `MODE=approved_destructive`.
 See [the recovery runbook](p1-reliability.md).
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)

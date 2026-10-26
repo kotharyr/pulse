@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+<<<<<<< HEAD
+=======
+from dataclasses import dataclass
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 from typing import Any
 
 
@@ -45,6 +49,7 @@ def summarize_capacity(
     }
 
 
+<<<<<<< HEAD
 def completion_percent(completed: float, total: float) -> float:
     return round(completed * 100 / total, 1) if total else 0.0
 
@@ -215,6 +220,8 @@ def issue_split_proposals(
     return sorted(proposals, key=lambda row: (-row["story_points"], row["source_issue_key"] or ""))
 
 
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 def overcommit_analysis(
     existing_points: float,
     added_points: float,
@@ -258,6 +265,7 @@ def overcommit_analysis(
             "utilization_percent": round(projected_count * 100 / capacity_issue_count, 1),
         })
     return result
+<<<<<<< HEAD
 
 
 def sprint_intelligence(
@@ -322,3 +330,5 @@ def sprint_intelligence(
         },
         "overcommit": projected,
     }
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)

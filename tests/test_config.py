@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 import pytest
 
 from engineering_ops.config import PROJECT_ROOT, JiraInstanceConfig, Settings, settings
+=======
+from engineering_ops.config import PROJECT_ROOT, JiraInstanceConfig, settings
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
 
 def test_url_trim():
@@ -26,6 +30,7 @@ def test_api_version_is_inferred():
 def test_legacy_kind_is_migrated():
     cfg = JiraInstanceConfig.model_validate({"kind": "cloud", "base_url": "https://x", "credentials": "cloud"})
     assert cfg.instance_type == "cloud"
+<<<<<<< HEAD
 
 
 def test_instance_config_rejects_unknown_keys():
@@ -60,3 +65,5 @@ def test_portfolio_hygiene_options_parse_comma_strings():
 
     assert isolated.portfolio_team_options == ["Platform Excellence"]
     assert isolated.portfolio_pt_options == ["Muon", "Atlas", "Phoenix", "Dragon"]
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)

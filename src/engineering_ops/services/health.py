@@ -9,8 +9,12 @@ def _date(value: str | None):
     if not value:
         return None
     try:
+<<<<<<< HEAD
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+=======
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
     except ValueError:
         return None
 

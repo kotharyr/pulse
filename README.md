@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Pulse user guide
 
 Pulse brings Jira searches, sprint analysis, portfolio hygiene and engineering
@@ -69,12 +70,44 @@ Do not put tokens in the README, issue descriptions or Chat prompts. Keep
 
 Each entry in `config/jira_instances.json` has a `credentials` reference. Pulse
 uses that reference to derive environment-variable names. For example:
+=======
+# Engineering Operations Platform v1.0
+
+A natural-language Engineering Operations backend for ChatGPT Enterprise using MCP.
+
+## What v1.0 provides
+
+- Jira Cloud and Jira Data Center/Server connectivity.
+- Jira credentials loaded centrally from `.env` / `.env.local` regardless of working directory.
+- Read-only Jira search, environment discovery, quarter reporting, and engineering-health reporting.
+- Human-readable Jira field/value updates with preview-first safety.
+- Sprint progress reporting.
+- Sprint-close planning that can:
+  - identify incomplete work,
+  - roll selected or all incomplete issues into the next sprint,
+  - create explicit follow-on split issues,
+  - transition source issues after an approved split,
+  - move issues in Jira-supported batches of 50,
+  - calculate projected next-sprint capacity,
+  - warn when the next sprint will be overcommitted,
+  - close the current sprint only in `approved_destructive` mode.
+- Local multi-repository discovery and dependency/container manifest scanning.
+- Security-ticket normalization for summaries containing `Operational Security Issue`.
+- Comparison of normalized package remediation targets with package versions found across local repositories.
+
+The server is deliberately safe by default. `MODE=recommend_only` allows analysis and previews but blocks writes.
+
+## v1.0 configuration model
+
+The instance file describes **what the system is**, not HTTP authentication details. You do not configure Basic vs Bearer or REST API versions.
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
 ```json
 {
   "cloud": {
     "type": "cloud",
     "base_url": "https://example.atlassian.net",
+<<<<<<< HEAD
     "credentials": "cloud",
     "default_project": "PLAT"
   },
@@ -83,10 +116,19 @@ uses that reference to derive environment-variable names. For example:
     "base_url": "https://jira.example.com",
     "credentials": "onprem",
     "default_project": "ENG"
+=======
+    "credentials": "cloud"
+  },
+  "onprem": {
+    "type": "datacenter",
+    "base_url": "https://jira.internal.example.com",
+    "credentials": "onprem"
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
   }
 }
 ```
 
+<<<<<<< HEAD
 This is an example, not a replacement for your existing configuration. Preserve
 any team, board, field-name and capacity settings already configured there.
 
@@ -273,3 +315,136 @@ The standard launcher remains read-only. Applying reviewed changes requires a
 server deliberately started in `safe_apply` mode and explicit approval in the
 Console. See [the Sprint Ops Work guide](docs/sprint-ops-work.md) for identity
 privacy, required fields, append-only accounting and failure recovery.
+=======
+The credential reference determines the environment variable prefix. For the example above:
+
+```dotenv
+JIRA_CLOUD_EMAIL=you@example.com
+JIRA_CLOUD_API_TOKEN=...
+JIRA_ONPREM_PAT=...
+```
+
+The platform automatically uses Jira Cloud email + API token with HTTP Basic authentication and Jira Data Center PATs as Bearer tokens. If `JIRA_ONPREM_PAT` is absent, Data Center can fall back to `JIRA_ONPREM_USERNAME` + `JIRA_ONPREM_PASSWORD`.
+
+Field IDs, select option IDs, platform REST API versions, and authentication header construction remain internal implementation details.
+
+## Upgrade from v0.4
+
+Copy your existing `.env` and `config/jira_instances.json`, then run:
+
+```bash
+python scripts/migrate_config_v1.py
+./scripts/check.sh
+```
+
+The migration makes `config/jira_instances.pre-v1.json` first. See `docs/migration-v1.md`.
+
+## Quick start
+
+```bash
+./scripts/install.sh
+cp .env.example .env                 # if install.sh did not already create it
+cp config/jira_instances.example.json config/jira_instances.json
+# edit .env and config/jira_instances.json
+./scripts/check.sh
+source .venv/bin/activate
+pytest
+./scripts/run.sh
+```
+
+Health endpoint:
+
+```bash
+curl -s http://127.0.0.1:8080/health | python3 -m json.tool
+```
+
+MCP endpoint:
+
+```text
+http://127.0.0.1:8080/mcp
+```
+
+## Safety modes
+
+### `recommend_only`
+
+Read, report, discover, scan repos, analyze security issues, calculate capacity, and preview changes. No Jira writes.
+
+### `safe_apply`
+
+Allows reversible Jira field updates such as Target Quarter assignments. Sprint closure and issue movement remain blocked.
+
+### `approved_destructive`
+
+Required for sprint-close execution, issue creation during splits, source transitions, moving issues between sprints, and closing the sprint.
+
+Always run `preview_close_sprint` immediately before `apply_close_sprint`.
+
+## Sprint capacity
+
+Configure an expected sprint capacity per Jira instance:
+
+```json
+{
+  "sprint_capacity_points": 50,
+  "sprint_capacity_buffer_percent": 10
+}
+```
+
+A 50-point capacity with a 10% buffer means the assistant treats 45 points as the safe planning limit.
+
+If no point capacity is configured, the server tries to estimate capacity from completed story points in recent closed sprints for the same board. If that is unavailable, it can use `sprint_capacity_issue_count`.
+
+## Natural language usage
+
+The intended UI is ChatGPT Enterprise. MCP tools are deliberately described so ChatGPT can translate natural requests into controlled tool calls.
+
+Examples:
+
+> Show me how the current Platform sprint is tracking and what is incomplete.
+
+> Prepare to close Sprint 42. Roll unfinished stories into Sprint 43, but split ENG-140 into a follow-on issue called "Complete audit logging". Do not make changes yet. Tell me if Sprint 43 will be overcommitted.
+
+> Which package upgrades would eliminate the most Operational Security Issue tickets, and which local repositories are still below the required version?
+
+> Give me an engineering-health review for all open Platform work, highlighting stale, blocked, and unassigned issues.
+
+See `docs/chatgpt-enterprise.md` and `docs/sprint-operations.md`.
+
+## Environment discovery
+
+Call `discover_jira_environment` to inventory human-readable projects, fields, boards, and active/future sprints. This reduces the need to know Jira IDs in ordinary conversation.
+
+## Local repositories
+
+Set:
+
+```dotenv
+LOCAL_REPO_ROOT=/Users/you/src
+```
+
+where the directory contains all checked-out repositories. The repository tools are read-only.
+
+## Security normalization
+
+The default security ticket marker is:
+
+```dotenv
+SECURITY_ISSUE_SUMMARY_MARKER=Operational Security Issue
+```
+
+`analyze_security_package_updates` extracts CVEs and explicit fixed/upgrade version statements from matching Jira tickets and groups them by package/version. It then shows matching package occurrences in local repository manifests.
+
+This is deliberately evidence-based. Tickets without parseable package/fixed-version information remain visible in `raw_ticket_analysis`; the server does not invent remediation versions.
+
+## Tests
+
+```bash
+source .venv/bin/activate
+pytest
+```
+
+## ChatGPT Enterprise
+
+ChatGPT must connect to a remotely reachable MCP endpoint. A local `127.0.0.1` endpoint is for development and MCP Inspector only. For a private corporate environment, deploy the server behind company-controlled HTTPS or use OpenAI Secure MCP Tunnel according to your workspace policies.
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)

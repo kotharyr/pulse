@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+<<<<<<< HEAD
 import re
 from threading import RLock
 from typing import Any, Protocol
@@ -195,17 +196,43 @@ JIRA_PROVIDER_PLUGINS: dict[str, JiraProviderPlugin] = {
 def register_jira_provider(instance_type: str, provider: JiraProviderPlugin) -> None:
     """Register or replace a Jira provider, enabling separately packaged adapters."""
     JIRA_PROVIDER_PLUGINS[instance_type] = provider
+=======
+from typing import Any
+import httpx
+
+from engineering_ops.config import JiraInstanceConfig, resolve_credentials, settings
+
+
+class JiraError(RuntimeError):
+    pass
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
 
 class JiraClient:
     def __init__(self, name: str, cfg: JiraInstanceConfig):
         self.name, self.cfg = name, cfg
+<<<<<<< HEAD
         try:
             self.provider = JIRA_PROVIDER_PLUGINS[cfg.instance_type]
         except KeyError as exc:
             raise JiraError(f"No Jira provider registered for {cfg.instance_type!r}") from exc
         credential = resolve_credentials(name, cfg)
         headers, auth = self.provider.authentication(credential)
+=======
+        credential = resolve_credentials(name, cfg)
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+        auth = None
+
+        if credential.method in {"cloud_api_token", "basic_fallback"}:
+            auth = (credential.username or "", credential.secret)
+        elif credential.method == "personal_access_token":
+            headers["Authorization"] = f"Bearer {credential.secret}"
+        elif credential.method == "legacy":
+            if credential.username:
+                auth = (credential.username, credential.secret)
+            else:
+                headers["Authorization"] = f"Bearer {credential.secret}"
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
         self.http = httpx.Client(
             base_url=cfg.base_url,
@@ -218,6 +245,7 @@ class JiraClient:
 
     @property
     def platform_api_version(self) -> str:
+<<<<<<< HEAD
         return self.provider.api_version
 
     def close(self) -> None:
@@ -241,10 +269,20 @@ class JiraClient:
             r = self.http.request(method, path, **kwargs)
         except httpx.HTTPError as exc:
             raise JiraError(f"{self.name}: {method} {display_path} -> network error: {exc}", method=method, path=display_path) from exc
+=======
+        return self.cfg.api_version
+
+    def request(self, method: str, path: str, **kwargs: Any) -> Any:
+        try:
+            r = self.http.request(method, path, **kwargs)
+        except httpx.HTTPError as exc:
+            raise JiraError(f"{self.name}: {method} {path} -> network error: {exc}") from exc
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
         if 300 <= r.status_code < 400:
             location = r.headers.get("location", "<missing Location header>")
             raise JiraError(
+<<<<<<< HEAD
                 f"{self.name}: {method} {display_path} -> {r.status_code} redirect to {location}. "
                 "Redirects are not followed automatically so credentials are never forwarded to an unexpected host.",
                 status_code=r.status_code,
@@ -260,6 +298,13 @@ class JiraClient:
                 path=display_path,
                 response_text=r.text[:1200],
             )
+=======
+                f"{self.name}: {method} {path} -> {r.status_code} redirect to {location}. "
+                "Redirects are not followed automatically so credentials are never forwarded to an unexpected host."
+            )
+        if r.status_code >= 400:
+            raise JiraError(f"{self.name}: {method} {path} -> {r.status_code}: {r.text[:1200]}")
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
         if not r.content:
             return {}
 
@@ -267,11 +312,16 @@ class JiraClient:
         if "json" not in content_type:
             preview = r.text[:500].replace("\n", " ")
             raise JiraError(
+<<<<<<< HEAD
                 f"{self.name}: {method} {display_path} returned non-JSON content-type {content_type or '<none>'}: {preview}"
+=======
+                f"{self.name}: {method} {path} returned non-JSON content-type {content_type or '<none>'}: {preview}"
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
             )
         try:
             return r.json()
         except ValueError as exc:
+<<<<<<< HEAD
             raise JiraError(f"{self.name}: {method} {display_path} returned invalid JSON: {r.text[:500]}") from exc
 
     def request(self, method: str, path: str, **kwargs: Any) -> Any:
@@ -287,6 +337,9 @@ class JiraClient:
         if last_not_found:
             raise last_not_found
         raise JiraError(f"{self.name}: {method} {path} could not be sent", method=method, path=path)
+=======
+            raise JiraError(f"{self.name}: {method} {path} returned invalid JSON: {r.text[:500]}") from exc
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
     def myself(self):
         return self.request("GET", f"/rest/api/{self.platform_api_version}/myself")
@@ -295,6 +348,7 @@ class JiraClient:
         return self.request("GET", f"/rest/api/{self.platform_api_version}/field")
 
     def projects(self, limit: int = 200):
+<<<<<<< HEAD
         return self.provider.projects(self, limit)
 
     def user_email(self, user: dict[str, Any]) -> str | None:
@@ -348,6 +402,44 @@ class JiraClient:
         if limit <= 0:
             return []
         return self.provider.search(self, jql, fields, limit)
+=======
+        if self.cfg.kind == "cloud":
+            data = self.request("GET", "/rest/api/3/project/search", params={"maxResults": limit})
+            return data.get("values", [])
+        data = self.request("GET", f"/rest/api/{self.platform_api_version}/project")
+        return data[:limit] if isinstance(data, list) else data
+
+    def search(self, jql: str, fields: list[str], limit: int = 500):
+        issues: list[dict[str, Any]] = []
+        if self.cfg.kind == "cloud":
+            token = None
+            while len(issues) < limit:
+                payload = {"jql": jql, "maxResults": min(100, limit - len(issues)), "fields": fields}
+                if token:
+                    payload["nextPageToken"] = token
+                data = self.request("POST", "/rest/api/3/search/jql", json=payload)
+                batch = data.get("issues", [])
+                issues.extend(batch)
+                token = data.get("nextPageToken")
+                if not batch or not token:
+                    break
+        else:
+            start = 0
+            while len(issues) < limit:
+                payload = {
+                    "jql": jql,
+                    "startAt": start,
+                    "maxResults": min(100, limit - len(issues)),
+                    "fields": fields,
+                }
+                data = self.request("POST", "/rest/api/2/search", json=payload)
+                batch = data.get("issues", [])
+                issues.extend(batch)
+                start += len(batch)
+                if not batch or start >= data.get("total", 0):
+                    break
+        return issues
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
     def get_issue(self, key: str, fields: list[str] | None = None):
         params = {"fields": ",".join(fields)} if fields else None
@@ -359,6 +451,7 @@ class JiraClient:
     def update_issue(self, key: str, fields: dict[str, Any]):
         return self.request("PUT", f"/rest/api/{self.platform_api_version}/issue/{key}", json={"fields": fields})
 
+<<<<<<< HEAD
     def update_issue_operations(self, key: str, update: dict[str, Any]):
         return self.request("PUT", f"/rest/api/{self.platform_api_version}/issue/{key}", json={"update": update})
 
@@ -405,12 +498,18 @@ class JiraClient:
         )
         return {"issue_key": issue_key, "to_status": status_name}
 
+=======
+    def create_issue(self, fields: dict[str, Any]):
+        return self.request("POST", f"/rest/api/{self.platform_api_version}/issue", json={"fields": fields})
+
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
     def sprint(self, sprint_id: int):
         return self.request("GET", f"/rest/agile/1.0/sprint/{sprint_id}")
 
     def update_sprint(self, sprint_id: int, fields: dict[str, Any]):
         return self.request("POST", f"/rest/agile/1.0/sprint/{sprint_id}", json=fields)
 
+<<<<<<< HEAD
     def sprint_issues(self, sprint_id: int, limit: int = 1000, story_points_field_id: str | None = None):
         fields = [
             "summary", "description", "status", "assignee", "issuetype", "project",
@@ -429,11 +528,25 @@ class JiraClient:
         batch_size = min(settings.bulk_batch_size, 50)
         for i in range(0, len(issue_keys), batch_size):
             batch = issue_keys[i:i + batch_size]
+=======
+    def sprint_issues(self, sprint_id: int, limit: int = 1000):
+        fields = [
+            "summary", "description", "status", "assignee", "issuetype", "project",
+            "parent", "labels", self.cfg.story_points_field_name,
+        ]
+        return self.search(f"sprint = {sprint_id}", fields, limit)
+
+    def move_issues_to_sprint(self, sprint_id: int, issue_keys: list[str]):
+        results = []
+        for i in range(0, len(issue_keys), 50):
+            batch = issue_keys[i:i + 50]
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
             self.request("POST", f"/rest/agile/1.0/sprint/{sprint_id}/issue", json={"issues": batch})
             results.append({"count": len(batch), "issues": batch})
         return results
 
     def boards(self, project_key: str | None = None, limit: int = 100):
+<<<<<<< HEAD
         rows = []
         while len(rows) < limit:
             params: dict[str, Any] = {"startAt": len(rows), "maxResults": min(50, limit - len(rows))}
@@ -445,6 +558,13 @@ class JiraClient:
             if not batch or data.get("isLast", True):
                 break
         return rows[:limit]
+=======
+        params: dict[str, Any] = {"maxResults": limit}
+        if project_key:
+            params["projectKeyOrId"] = project_key
+        data = self.request("GET", "/rest/agile/1.0/board", params=params)
+        return data.get("values", [])
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
 
     def board_sprints(self, board_id: int, state: str | None = None, limit: int = 100):
         start = 0
@@ -460,6 +580,7 @@ class JiraClient:
                 break
             start += len(batch)
         return rows
+<<<<<<< HEAD
 
 
 class JiraClientManager:
@@ -484,3 +605,5 @@ class JiraClientManager:
             for jira in self._clients.values():
                 jira.close()
             self._clients.clear()
+=======
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)

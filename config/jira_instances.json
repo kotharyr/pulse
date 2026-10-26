@@ -4,7 +4,11 @@
     "base_url": "https://cisco-sbg.atlassian.net",
     "credentials": "cloud",
     "default_project": "MUON",
+<<<<<<< HEAD
     "quarter_field_name": "Fix Version/s",
+=======
+    "quarter_field_name": "Fix versions",
+>>>>>>> 6e6588a (Initial Engineering Operations Platform baseline)
     "story_points_field_name": "Story Points",
     "default_board_id": 1,
     "sprint_capacity_points": 70,
