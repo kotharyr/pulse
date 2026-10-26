@@ -1,0 +1,77 @@
+2026-10-26 08:33:08,529 INFO engineering_ops Startup configuration:
+{
+  "project_root": "/Users/rakothar/pulse-app",
+  "loaded_env_files": [
+    "/Users/rakothar/pulse-app/.env",
+    "/Users/rakothar/pulse-app/.env.local"
+  ],
+  "mode": "recommend_only",
+  "mcp": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "authentication_required": true
+  },
+  "jira_instances_file": "/Users/rakothar/pulse-app/config/jira_instances.json",
+  "instances": [
+    {
+      "name": "cloud",
+      "type": "cloud",
+      "credentials_loaded": true
+    },
+    {
+      "name": "onprem",
+      "type": "datacenter",
+      "credentials_loaded": true
+    }
+  ],
+  "local_repo_root": "/Users/rakothar/pulse-app",
+  "warnings": [
+    "BULK_BATCH_SIZE=500 exceeds Jira's limit and will be capped at 50."
+  ]
+}
+/Users/rakothar/pulse-app/src/engineering_ops/server.py:453: DeprecationWarning: `AuthSettings.validate_token_resource` is not set, so bearer tokens are not checked against `resource_server_url`; it will default to True in 3.0 when `resource_server_url` is set. Set it to True to have the server refuse tokens issued for another resource, or to False if your TokenVerifier validates the token's audience itself.
+  auth_settings = AuthSettings(
+INFO:     Started server process [19526]
+INFO:     Waiting for application startup.
+2026-10-26 08:33:08,567 INFO mcp.server.streamable_http_manager StreamableHTTP session manager started
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59497 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59498 - "GET /console HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59498 - "GET /console/styles.css?v=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59499 - "GET /console/app.js?v=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59499 - "GET /api/views HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59499 - "GET /api/instances HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59499 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59499 - "GET /api/executions?limit=12 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59512 - "GET /api/instances HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59512 - "GET /api/views HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59512 - "GET /api/executions?limit=12 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59512 - "GET /api/platform/configuration HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59513 - "GET /api/platform/connectors HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59514 - "GET /api/platform/audit?limit=12 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59515 - "GET /api/platform/metrics HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59516 - "GET /api/platform/diagnostics HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59516 - "GET /api/sprint/discovery?instance=onprem HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59516 - "GET /api/instances HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59516 - "GET /api/views HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59516 - "GET /api/executions?limit=12 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59516 - "GET /api/platform/configuration HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59515 - "GET /api/platform/connectors HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59514 - "GET /api/platform/audit?limit=12 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59513 - "GET /api/platform/metrics HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59512 - "GET /api/platform/diagnostics HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59525 - "GET /api/instances HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59525 - "GET /api/views HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59525 - "GET /api/executions?limit=12 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59525 - "GET /api/platform/configuration HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59526 - "GET /api/platform/connectors HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59527 - "GET /api/platform/audit?limit=12 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59528 - "GET /api/platform/metrics HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59529 - "GET /api/platform/diagnostics HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59828 - "GET /api/issues?instance=onprem&jql=updated+%3E%3D+-30d+ORDER+BY+updated+DESC&page=1&page_size=25 HTTP/1.1" 401 Unauthorized
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-10-26 12:15:31,877 INFO mcp.server.streamable_http_manager StreamableHTTP session manager shutting down
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19526]

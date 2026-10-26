@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pulse Console</title>
+    <link rel="stylesheet" href="/console/styles.css?v=8">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-main">
+            <div class="brand-mark pulse-logo" aria-label="Pulse">P</div>
+            <div class="brand-copy">
+              <p class="eyebrow">Engineering Operations</p>
+              <strong>Pulse</strong>
+            </div>
+          </div>
+          <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Collapse side menu" aria-expanded="true" aria-controls="main-menu" title="Collapse menu">
+            <span class="toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+          </button>
+        </div>
+
+        <nav class="main-menu" id="main-menu" aria-label="Main menu">
+          <button class="nav-item active" type="button" data-view-target="workflow-view" aria-label="Engineering Review" title="Engineering Review">
+            <span class="nav-icon">P</span>
+            <span class="nav-label">Engineering Review</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="jira-view" aria-label="Jira Management" title="Jira Management">
+            <span class="nav-icon">J</span>
+            <span class="nav-label">Jira Management</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="environment-view" aria-label="Environment" title="Environment">
+            <span class="nav-icon">E</span>
+            <span class="nav-label">Environment</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="saved-views-view" aria-label="Saved Views" title="Saved Views">
+            <span class="nav-icon">V</span>
+            <span class="nav-label">Saved Views</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="repositories-view" aria-label="Repositories" title="Repositories">
+            <span class="nav-icon">R</span>
+            <span class="nav-label">Repositories</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="security-view" aria-label="Security" title="Security">
+            <span class="nav-icon">S</span>
+            <span class="nav-label">Security</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="hygiene-view" aria-label="Hygiene" title="Hygiene">
+            <span class="nav-icon">Y</span>
+            <span class="nav-label">Hygiene</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="task-view" aria-label="Task Management" title="Task Management">
+            <span class="nav-icon">T</span>
+            <span class="nav-label">Task Management</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="insights-view" aria-label="Insights" title="Insights">
+            <span class="nav-icon">I</span>
+            <span class="nav-label">Insights</span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="system-view" aria-label="System" title="System">
+            <span class="nav-icon">H</span>
+            <span class="nav-label">System Health</span>
+          </button>
+        </nav>
+
+        <div class="theme-panel">
+          <span class="theme-heading">Theme</span>
+          <label class="theme-toggle" for="theme-toggle">
+            <span class="theme-label">Light</span>
+            <input id="theme-toggle" type="checkbox" role="switch" aria-label="Toggle dark mode">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="theme-label">Dark</span>
+          </label>
+        </div>
+      </aside>
+
+      <div class="console-frame">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Workspace</p>
+            <h1 id="view-title">Engineering Review</h1>
+          </div>
+          <div class="topbar-actions">
+            <label class="selector-row" for="console-token">
+              <span>Access token</span>
+              <input id="console-token" type="password" autocomplete="off" placeholder="If required" aria-label="Pulse access token">
+            </label>
+            <button id="console-connect" type="button">Connect</button>
+            <label class="selector-row" for="instance-select">
+              <span>Instance</span>
+              <select id="instance-select">
+                <option value="cloud">Cloud</option>
+                <option value="onprem">On-Prem</option>
+              </select>
+            </label>
+            <div class="mode-pill" id="mode-pill">recommend_only</div>
+          </div>
+        </header>
+
+        <main class="workspace">
+          <section class="view active" id="workflow-view" data-view-title="Engineering Review">
+            <section class="panel pulse-hero accent-cyan">
+              <div>
+                <p class="eyebrow">Pulse</p>
+                <h2>Engineering leadership, every morning.</h2>
+                <p class="mission">Pulse turns connected delivery, security, repository, and portfolio signals into a trusted operating briefing for engineering leaders.</p>
+              </div>
+              <button class="primary" type="button" data-workflow="engineering-review">Prepare Engineering Review</button>
+            </section>
+
+            <section class="workflow-grid review-drilldowns" aria-label="Engineering review drilldowns">
+              <article class="panel accent-green">
+                <h2>Sprint</h2>
+                <p class="workflow-copy">Completion, blockers, rollover risk, and capacity.</p>
+                <button class="primary" type="button" data-workflow="sprint-analysis">Open</button>
+              </article>
+              <article class="panel accent-blue">
+                <h2>Backlog</h2>
+                <p class="workflow-copy">Disposition, stale work, low-quality tickets, and priorities.</p>
+                <button class="primary" type="button" data-workflow="backlog-review">Open</button>
+              </article>
+              <article class="panel accent-red">
+                <h2>Security</h2>
+                <p class="workflow-copy">Package upgrades, ticket reduction, and rollout order.</p>
+                <button class="primary" type="button" data-workflow="security-remediation-analysis">Open</button>
+              </article>
+              <article class="panel accent-magenta">
+                <h2>Portfolio</h2>
+                <p class="workflow-copy">Quarter commitments and rebalance signals.</p>
+                <button class="primary" type="button" data-workflow="portfolio-review">Open</button>
+              </article>
+              <article class="panel accent-cyan">
+                <h2>Hygiene</h2>
+                <p class="workflow-copy">Portfolio hierarchy, dates, and commitment labels.</p>
+                <button type="button" data-jump-view="hygiene-view">Open</button>
+              </article>
+              <article class="panel accent-green">
+                <h2>Repositories</h2>
+                <p class="workflow-copy">Repository and package inventory signals.</p>
+                <button type="button" data-jump-view="repositories-view">Open</button>
+              </article>
+              <article class="panel accent-blue">
+                <h2>Saved Views</h2>
+                <p class="workflow-copy">Run operational views with summarized risks.</p>
+                <button class="primary" type="button" data-workflow="saved-view-review">Open</button>
+              </article>
+              <article class="panel accent-amber">
+                <h2>Execution History</h2>
+                <p class="workflow-copy">Preview, apply, reject, and audit outcomes.</p>
+                <button type="button" data-jump-view="system-view">Open</button>
+              </article>
+              <article class="panel accent-cyan">
+                <h2>System Health</h2>
+                <p class="workflow-copy">Connectors, diagnostics, configuration, and readiness.</p>
+                <button type="button" data-jump-view="system-view">Open</button>
+              </article>
+            </section>
+
+            <section class="panel accent-cyan">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Orchestration</p>
+                  <h2>Workflow Inputs</h2>
+                </div>
+                <span class="state-badge preview" id="workflow-status">Ready</span>
+              </div>
+              <div class="workflow-inputs">
+                <label class="field-block" for="workflow-project">
+                  <span>Project</span>
+                  <input id="workflow-project" placeholder="ENG">
+                </label>
+                <label class="field-block" for="workflow-team">
+                  <span>Team</span>
+                  <input id="workflow-team" placeholder="Platform">
+                </label>
+                <label class="field-block" for="workflow-saved-view">
+                  <span>Saved View</span>
+                  <input id="workflow-saved-view" placeholder="Security Exceptions">
+                </label>
+                <label class="field-block" for="workflow-sprint">
+                  <span>Sprint</span>
+                  <input id="workflow-sprint" placeholder="Current or name">
+                </label>
+                <label class="field-block" for="workflow-next-sprint">
+                  <span>Next Sprint</span>
+                  <input id="workflow-next-sprint" placeholder="Next or name">
+                </label>
+                <label class="field-block" for="workflow-quarter">
+                  <span>Quarter</span>
+                  <input id="workflow-quarter" placeholder="FY27 Q2">
+                </label>
+                <label class="field-block" for="workflow-preview-id">
+                  <span>Preview ID</span>
+                  <input id="workflow-preview-id" placeholder="From preview">
+                </label>
+              </div>
+            </section>
+
+            <section class="workflow-grid" aria-label="Task-oriented workflows">
+              <article class="panel accent-amber">
+                <h2>Sprint Close Preview</h2>
+                <p class="workflow-copy">Stored preview with exact rollover, split, and close actions.</p>
+                <button class="primary" type="button" data-workflow="sprint-close-preview">Preview</button>
+              </article>
+              <article class="panel accent-red">
+                <h2>Sprint Close Apply</h2>
+                <p class="workflow-copy">Apply only a reviewed preview id in approved destructive mode.</p>
+                <button class="danger" type="button" data-workflow="sprint-close-apply">Apply</button>
+              </article>
+            </section>
+
+            <section class="panel wide-panel accent-cyan">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Result</p>
+                  <h2 id="workflow-title">No workflow run</h2>
+                </div>
+                <span id="workflow-confidence" class="panel-meta">No coverage</span>
+              </div>
+              <div class="workflow-result-grid">
+                <section>
+                  <div id="workflow-metrics" class="metric-grid summary-grid"></div>
+                  <h3>Risks</h3>
+                  <div id="workflow-risks" class="mini-list"></div>
+                  <h3>Recommendations</h3>
+                  <div id="workflow-recommendations" class="mini-list"></div>
+                </section>
+                <section>
+                  <h3>Source Coverage</h3>
+                  <div id="workflow-coverage" class="mini-list"></div>
+                  <h3>Preview Status</h3>
+                  <div id="workflow-preview" class="mini-list"></div>
+                </section>
+              </div>
+              <div class="table-wrap workflow-issue-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Key</th>
+                      <th>Summary</th>
+                      <th>Status</th>
+                      <th>Assignee</th>
+                    </tr>
+                  </thead>
+                  <tbody id="workflow-issues">
+                    <tr><td colspan="4" class="empty">Run a workflow to load drill-down issues.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <pre id="workflow-output">{}</pre>
+            </section>
+          </section>
+
+          <section class="view" id="jira-view" data-view-title="Jira Management">
+            <section class="panel sprint-command accent-cyan" aria-labelledby="sprint-title">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Sprint Control</p>
+                  <h2 id="sprint-title">Current Sprint</h2>
+                </div>
+                <div class="sprint-inputs">
+                  <label for="sprint-id">Sprint</label>
+                  <input id="sprint-id" inputmode="numeric" placeholder="42">
+                  <label for="next-sprint-id">Next</label>
+                  <input id="next-sprint-id" inputmode="numeric" placeholder="43">
+                  <button id="load-sprint" class="primary" type="button">Load</button>
+                </div>
+              </div>
+              <div class="sprint-context">
+                <div>
+                  <span>Current</span>
+                  <strong id="sprint-name">Detecting active sprint</strong>
+                  <small id="sprint-window">No sprint loaded</small>
+                </div>
+                <div>
+                  <span>Next</span>
+                  <strong id="next-sprint-name">Detecting next sprint</strong>
+                  <small id="next-sprint-strategy">Waiting for Jira</small>
+                </div>
+                <div class="discovery-chip" id="sprint-status">Auto-loading</div>
+              </div>
+            </section>
+
+            <section class="sprint-dashboard-grid" aria-label="Sprint dashboard">
+              <article class="panel ring-panel accent-cyan">
+                <div class="section-title compact">
+                  <h2>Sprint Completion</h2>
+                  <span id="metric-completion">0%</span>
+                </div>
+                <div class="sprint-ring" id="sprint-ring" style="--progress: 0%">
+                  <div class="ring-core">
+                    <strong id="ring-percent">0%</strong>
+                    <span id="ring-points">0 / 0 pts</span>
+                  </div>
+                </div>
+                <div class="ring-legend">
+                  <span><i class="legend-dot done"></i>Done</span>
+                  <span><i class="legend-dot remaining"></i>Remaining</span>
+                </div>
+              </article>
+
+              <article class="panel metric-panel accent-green">
+                <div class="metric-grid" id="metric-grid">
+                  <article class="metric">
+                    <span>Completed Points</span>
+                    <strong id="metric-completed-points">0</strong>
+                  </article>
+                  <article class="metric">
+                    <span>Remaining Points</span>
+                    <strong id="metric-remaining-points">0</strong>
+                  </article>
+                  <article class="metric">
+                    <span>Projected Load</span>
+                    <strong id="metric-projected-load">0</strong>
+                  </article>
+                  <article class="metric">
+                    <span>Capacity</span>
+                    <strong id="metric-capacity">Unknown</strong>
+                  </article>
+                  <article class="metric warning" id="overcommit-card">
+                    <span>Overcommit</span>
+                    <strong id="metric-overcommit">0%</strong>
+                  </article>
+                </div>
+              </article>
+
+              <article class="panel engineer-panel accent-magenta">
+                <div class="section-title compact">
+                  <h2>Engineer Workload</h2>
+                  <span class="panel-meta">Done / committed</span>
+                </div>
+                <div id="engineer-progress" class="workload-list"></div>
+              </article>
+
+              <article class="panel team-panel accent-amber">
+                <div class="section-title compact">
+                  <h2>Team Progress</h2>
+                  <span class="panel-meta">Story points</span>
+                </div>
+                <div id="team-progress" class="bar-list"></div>
+              </article>
+            </section>
+
+            <section class="operations-grid" aria-label="Jira operations">
+              <section class="panel search-panel accent-blue" aria-labelledby="search-title">
+                <div class="section-title">
+                  <div>
+                    <p class="eyebrow">Jira</p>
+                    <h2 id="search-title">Issue Search</h2>
+                  </div>
+                  <div class="button-row">
+                    <button id="search-button" class="primary" type="button">Search</button>
+                    <button id="save-view-button" type="button">Save View</button>
+                  </div>
+                </div>
+                <label class="field-block" for="jql-input">
+                  <span>JQL</span>
+                  <input id="jql-input" type="search" value="updated >= -30d ORDER BY updated DESC">
+                </label>
+                <div class="saved-views" id="saved-views"></div>
+              </section>
+
+              <section class="panel table-panel accent-blue" aria-labelledby="issues-title">
+                <div class="section-title compact">
+                  <h2 id="issues-title">Issues</h2>
+                  <div class="pager">
+                    <button id="prev-page" type="button" aria-label="Previous page">Prev</button>
+                    <span id="page-label">Page 1</span>
+                    <button id="next-page" type="button" aria-label="Next page">Next</button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Key</th>
+                        <th>Summary</th>
+                        <th>Status</th>
+                        <th>Assignee</th>
+                        <th>Points</th>
+                        <th>Updated</th>
+                      </tr>
+                    </thead>
+                    <tbody id="issues-body">
+                      <tr><td colspan="6" class="empty">Run a search to load issues.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="panel accent-red">
+                <div class="section-title compact">
+                  <h2>Blocked Work</h2>
+                  <span class="panel-meta">Current sprint</span>
+                </div>
+                <div id="blocked-work" class="mini-list"></div>
+              </section>
+
+              <section class="panel accent-amber">
+                <div class="section-title compact">
+                  <h2>Rollover Candidates</h2>
+                  <span class="panel-meta">Incomplete</span>
+                </div>
+                <div id="rollover-candidates" class="mini-list"></div>
+              </section>
+
+              <section class="panel accent-magenta">
+                <div class="section-title compact">
+                  <h2>Split Proposals</h2>
+                  <span class="panel-meta">Follow-on work</span>
+                </div>
+                <div id="split-proposals" class="mini-list"></div>
+              </section>
+
+              <section class="panel execution-panel accent-green" aria-labelledby="execution-title">
+                <div class="section-title">
+                  <div>
+                    <p class="eyebrow">Execution</p>
+                    <h2 id="execution-title">Preview Close</h2>
+                  </div>
+                  <div class="button-row">
+                    <label class="checkline" for="rollover-all">
+                      <input id="rollover-all" type="checkbox" checked>
+                      <span>Roll incomplete</span>
+                    </label>
+                    <button id="preview-close" class="primary" type="button">Preview</button>
+                  </div>
+                </div>
+                <div class="preview-grid">
+                  <section class="preview-panel">
+                    <div class="status-row">
+                      <span class="state-badge preview">Preview</span>
+                      <span id="preview-status">No preview selected</span>
+                    </div>
+                    <pre id="preview-output">{}</pre>
+                    <div class="button-row end">
+                      <button id="reject-preview" type="button" disabled>Reject</button>
+                      <button id="reconcile-preview" type="button" disabled>Reconcile</button>
+                      <button id="resume-preview" class="danger" type="button" disabled>Resume Reviewed Recovery</button>
+                      <button id="apply-preview" class="danger" type="button" disabled>Apply</button>
+                    </div>
+                  </section>
+                  <section>
+                    <h3>Execution History</h3>
+                    <div id="execution-history" class="history-list"></div>
+                  </section>
+                </div>
+              </section>
+            </section>
+          </section>
+
+          <section class="view" id="environment-view" data-view-title="Environment">
+            <section class="panel accent-cyan">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Discovery</p>
+                  <h2>Jira Environment</h2>
+                </div>
+                <div class="button-row">
+                  <span class="state-badge preview" id="env-cache-age">Not loaded</span>
+                  <button id="env-refresh" class="primary" type="button">Refresh Cache</button>
+                </div>
+              </div>
+              <div class="metric-grid summary-grid">
+                <article class="metric">
+                  <span>Projects</span>
+                  <strong id="env-project-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Boards</span>
+                  <strong id="env-board-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Sprints</span>
+                  <strong id="env-sprint-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Fields</span>
+                  <strong id="env-field-count">0</strong>
+                </article>
+              </div>
+            </section>
+
+            <section class="operations-grid" aria-label="Environment discovery results">
+              <article class="panel accent-blue">
+                <div class="section-title compact">
+                  <h2>Projects</h2>
+                  <span class="panel-meta">Visible keys</span>
+                </div>
+                <div id="env-projects" class="mini-list"></div>
+              </article>
+              <article class="panel accent-green">
+                <div class="section-title compact">
+                  <h2>Boards & Sprints</h2>
+                  <span class="panel-meta">Active and future</span>
+                </div>
+                <div id="env-boards" class="mini-list"></div>
+              </article>
+              <article class="panel accent-magenta">
+                <div class="section-title compact">
+                  <h2>Field Values</h2>
+                  <span class="panel-meta">Names only</span>
+                </div>
+                <div id="env-values" class="mini-list"></div>
+              </article>
+              <article class="panel table-panel accent-amber">
+                <div class="section-title compact">
+                  <h2>Custom Fields</h2>
+                  <span class="panel-meta">No field IDs exposed</span>
+                </div>
+                <div id="env-fields" class="mini-list"></div>
+              </article>
+              <article class="panel accent-red">
+                <div class="section-title compact">
+                  <h2>Discovery Gaps</h2>
+                  <span class="panel-meta">Graceful failures</span>
+                </div>
+                <div id="env-errors" class="mini-list"></div>
+              </article>
+            </section>
+          </section>
+
+          <section class="view" id="saved-views-view" data-view-title="Saved Views">
+            <section class="panel accent-blue">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Operations</p>
+                  <h2>Saved Operational Views</h2>
+                </div>
+                <button id="ops-views-refresh" class="primary" type="button">Reload Views</button>
+              </div>
+              <div class="saved-view-layout">
+                <section>
+                  <div id="ops-views-list" class="mini-list"></div>
+                </section>
+                <section class="saved-view-results">
+                  <div class="section-title compact">
+                    <h2 id="ops-view-title">View Results</h2>
+                    <span id="ops-view-count" class="panel-meta">No view selected</span>
+                  </div>
+                  <pre id="ops-view-jql" class="jql-preview">Select a saved view to preview its query.</pre>
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Key</th>
+                          <th>Summary</th>
+                          <th>Status</th>
+                          <th>Assignee</th>
+                        </tr>
+                      </thead>
+                      <tbody id="ops-view-results">
+                        <tr><td colspan="4" class="empty">No view selected.</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            </section>
+          </section>
+
+          <section class="view" id="repositories-view" data-view-title="Repositories">
+            <section class="panel accent-green">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Inventory</p>
+                  <h2>Repository Inventory</h2>
+                </div>
+                <button id="repo-refresh" class="primary" type="button">Scan Local Root</button>
+              </div>
+              <label class="field-block" for="repo-filter">
+                <span>Filter</span>
+                <input id="repo-filter" type="search" placeholder="Repository, language, owner, package">
+              </label>
+              <div class="metric-grid summary-grid">
+                <article class="metric">
+                  <span>Repositories</span>
+                  <strong id="repo-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Packages</span>
+                  <strong id="package-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Images</span>
+                  <strong id="image-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Configured</span>
+                  <strong id="repo-configured">No</strong>
+                </article>
+              </div>
+            </section>
+            <section class="panel wide-panel accent-green">
+              <div class="section-title compact">
+                <h2>Discovered Repositories</h2>
+                <span id="repo-status" class="panel-meta">Not loaded</span>
+              </div>
+              <div id="repo-list" class="mini-list"></div>
+            </section>
+          </section>
+
+          <section class="view" id="security-view" data-view-title="Security">
+            <section class="panel accent-red">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Remediation</p>
+                  <h2>Operational Security Issues</h2>
+                </div>
+                <button id="security-refresh" class="primary" type="button">Analyze</button>
+              </div>
+              <div class="metric-grid summary-grid">
+                <article class="metric">
+                  <span>Matched Tickets</span>
+                  <strong id="security-ticket-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Actions</span>
+                  <strong id="security-action-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Repositories</span>
+                  <strong id="security-repo-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Mode</span>
+                  <strong id="security-mode">Preview</strong>
+                </article>
+              </div>
+            </section>
+            <section class="panel wide-panel accent-red">
+              <div class="section-title compact">
+                <h2>Normalized Remediation</h2>
+                <span id="security-status" class="panel-meta">Not loaded</span>
+              </div>
+              <div id="security-actions" class="mini-list"></div>
+            </section>
+          </section>
+
+          <section class="view" id="hygiene-view" data-view-title="Portfolio Hygiene">
+            <section class="panel accent-cyan">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">On-Prem Portfolio</p>
+                  <h2>Portfolio Hygiene</h2>
+                </div>
+                <div class="button-row">
+                  <span class="state-badge preview" id="hygiene-status">Not loaded</span>
+                  <button id="hygiene-review" class="primary" type="button">Review</button>
+                </div>
+              </div>
+              <div class="hygiene-filters">
+                <label class="field-block" for="hygiene-quarter">
+                  <span>Quarter</span>
+                  <input id="hygiene-quarter" placeholder="Resolving current fiscal quarter">
+                </label>
+                <label class="field-block" for="hygiene-project">
+                  <span>Project</span>
+                  <input id="hygiene-project" placeholder="Default project">
+                </label>
+                <label class="field-block" for="hygiene-team">
+                  <span>Team</span>
+                  <select id="hygiene-team">
+                    <option value="Platform Excellence">Platform Excellence</option>
+                  </select>
+                </label>
+                <label class="field-block" for="hygiene-pt">
+                  <span>PT</span>
+                  <select id="hygiene-pt">
+                    <option value="">All PTs</option>
+                    <option value="Muon">Muon</option>
+                    <option value="Atlas">Atlas</option>
+                    <option value="Phoenix">Phoenix</option>
+                    <option value="Dragon">Dragon</option>
+                  </select>
+                </label>
+                <label class="field-block" for="hygiene-saved-view">
+                  <span>Saved View</span>
+                  <input id="hygiene-saved-view" placeholder="Optional">
+                </label>
+                <label class="field-block" for="hygiene-type">
+                  <span>Issue Type</span>
+                  <select id="hygiene-type">
+                    <option value="">All</option>
+                    <option value="Portfolio Feature">Portfolio Feature</option>
+                    <option value="Epic">Epic</option>
+                    <option value="User Story">User Story</option>
+                  </select>
+                </label>
+                <label class="field-block" for="hygiene-category">
+                  <span>Problem</span>
+                  <select id="hygiene-category">
+                    <option value="">All</option>
+                    <option value="hierarchy">Hierarchy</option>
+                    <option value="dates">Dates</option>
+                    <option value="labels">Labels</option>
+                  </select>
+                </label>
+                <label class="field-block" for="hygiene-fixability">
+                  <span>Fixability</span>
+                  <select id="hygiene-fixability">
+                    <option value="">All</option>
+                    <option value="auto">Auto-fixable</option>
+                    <option value="manual">Manual review</option>
+                  </select>
+                </label>
+                <label class="field-block" for="hygiene-limit">
+                  <span>Limit</span>
+                  <input id="hygiene-limit" inputmode="numeric" value="500">
+                </label>
+              </div>
+              <div class="metric-grid summary-grid hygiene-summary-grid">
+                <article class="metric">
+                  <span>Ancestry Coverage</span>
+                  <strong id="hygiene-ancestry">0%</strong>
+                </article>
+                <article class="metric">
+                  <span>Incorrect Quarter Dates</span>
+                  <strong id="hygiene-date-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Missing Quarter Labels</span>
+                  <strong id="hygiene-missing-labels">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Wrong-Quarter Labels</span>
+                  <strong id="hygiene-wrong-labels">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Safe Fixes</span>
+                  <strong id="hygiene-safe-fixes">0</strong>
+                </article>
+                <article class="metric warning">
+                  <span>Manual Reviews</span>
+                  <strong id="hygiene-manual">0</strong>
+                </article>
+              </div>
+            </section>
+
+            <section class="panel wide-panel accent-blue">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Findings</p>
+                  <h2>Review Results</h2>
+                </div>
+                <div class="button-row">
+                  <button id="hygiene-preview-selected" type="button" disabled>Preview Selected</button>
+                  <button id="hygiene-preview-all" class="primary" type="button" disabled>Preview All Safe Fixes</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="hygiene-table">
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>Issue</th>
+                      <th>Issue Type</th>
+                      <th>Team/PT</th>
+                      <th>Target Quarter</th>
+                      <th>Problem</th>
+                      <th>Current Value</th>
+                      <th>Expected Value</th>
+                      <th>Auto-Fixable</th>
+                      <th>Ancestry Path</th>
+                      <th>Recommended Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hygiene-findings">
+                    <tr><td colspan="11" class="empty">Run a hygiene review to load findings.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="operations-grid" aria-label="Portfolio hygiene execution">
+              <section class="panel execution-panel accent-green">
+                <div class="section-title">
+                  <div>
+                    <p class="eyebrow">Preview First</p>
+                    <h2>Execution Preview</h2>
+                  </div>
+                  <div class="button-row">
+                    <button id="hygiene-reject" type="button" disabled>Reject</button>
+                    <button id="hygiene-apply" class="danger" type="button" disabled>Apply</button>
+                  </div>
+                </div>
+                <div class="status-row">
+                  <span class="state-badge preview">Preview</span>
+                  <span id="hygiene-preview-status">No preview selected</span>
+                </div>
+                <pre id="hygiene-preview-output">{}</pre>
+              </section>
+              <section class="panel accent-amber">
+                <div class="section-title compact">
+                  <h2>Execution History</h2>
+                  <span class="panel-meta">Portfolio Hygiene</span>
+                </div>
+                <div id="hygiene-history" class="history-list"></div>
+              </section>
+            </section>
+          </section>
+
+          <section class="view" id="system-view" data-view-title="System Health">
+            <section class="panel accent-cyan">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow">Platform</p>
+                  <h2>Pulse System Health</h2>
+                </div>
+                <button id="system-refresh" class="primary" type="button">Refresh</button>
+              </div>
+              <div class="metric-grid summary-grid">
+                <article class="metric">
+                  <span>Readiness</span>
+                  <strong id="system-readiness">Unknown</strong>
+                </article>
+                <article class="metric">
+                  <span>Mode</span>
+                  <strong id="system-mode">Unknown</strong>
+                </article>
+                <article class="metric">
+                  <span>Connectors</span>
+                  <strong id="system-connectors-count">0</strong>
+                </article>
+                <article class="metric">
+                  <span>Audit Events</span>
+                  <strong id="system-audit-count">0</strong>
+                </article>
+              </div>
+            </section>
+
+            <section class="operations-grid" aria-label="Pulse platform operations">
+              <article class="panel accent-blue">
+                <div class="section-title compact">
+                  <h2>Configuration</h2>
+                  <span class="panel-meta">Sanitized</span>
+                </div>
+                <div id="system-config" class="mini-list"></div>
+              </article>
+              <article class="panel accent-green">
+                <div class="section-title compact">
+                  <h2>Connector Status</h2>
+                  <span class="panel-meta">Configured and planned</span>
+                </div>
+                <div id="system-connectors" class="mini-list"></div>
+              </article>
+              <article class="panel accent-amber">
+                <div class="section-title compact">
+                  <h2>System Metrics</h2>
+                  <span class="panel-meta">Runtime</span>
+                </div>
+                <div id="system-metrics" class="mini-list"></div>
+              </article>
+              <article class="panel accent-magenta">
+                <div class="section-title compact">
+                  <h2>Audit Trail</h2>
+                  <span class="panel-meta">Recent</span>
+                </div>
+                <div id="system-audit" class="mini-list"></div>
+              </article>
+              <article class="panel table-panel accent-red">
+                <div class="section-title compact">
+                  <h2>Diagnostics</h2>
+                  <span id="system-diagnostics-status" class="panel-meta">Not loaded</span>
+                </div>
+                <pre id="system-diagnostics">{}</pre>
+              </article>
+            </section>
+          </section>
+
+          <section class="view" id="task-view" data-view-title="Task Management">
+            <section class="task-grid">
+              <article class="panel accent-cyan">
+                <div class="section-title compact">
+                  <h2>Task Queue</h2>
+                  <span class="panel-meta">Local</span>
+                </div>
+                <div class="mini-list" id="task-queue">
+                  <div class="mini-item">
+                    <strong>Sprint rollover review</strong>
+                    <span>Awaiting active sprint data.</span>
+                    <span class="list-meta">Pending sprint load</span>
+                  </div>
+                </div>
+              </article>
+              <article class="panel accent-green">
+                <div class="section-title compact">
+                  <h2>Saved Views</h2>
+                    <span class="panel-meta">Local config</span>
+                </div>
+                <div class="mini-list" id="task-saved-views"></div>
+              </article>
+              <article class="panel accent-amber">
+                <div class="section-title compact">
+                  <h2>Planning Notes</h2>
+                  <span class="panel-meta">Draft</span>
+                </div>
+                <textarea id="task-notes" spellcheck="true" placeholder="Notes"></textarea>
+              </article>
+            </section>
+          </section>
+
+          <section class="view" id="insights-view" data-view-title="Insights">
+            <section class="task-grid">
+              <article class="panel accent-blue">
+                <div class="section-title compact">
+                  <h2>Repository Health</h2>
+                  <span class="panel-meta">Planned</span>
+                </div>
+                <div class="mini-list">
+                  <div class="empty">No insight data loaded.</div>
+                </div>
+              </article>
+              <article class="panel accent-magenta">
+                <div class="section-title compact">
+                  <h2>Delivery Trends</h2>
+                  <span class="panel-meta">Planned</span>
+                </div>
+                <div class="mini-list">
+                  <div class="empty">No trend data loaded.</div>
+                </div>
+              </article>
+            </section>
+          </section>
+        </main>
+      </div>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+    <script src="/console/app.js?v=8"></script>
+  </body>
+</html>
