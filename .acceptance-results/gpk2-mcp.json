@@ -1,0 +1,54 @@
+{
+  "mode": "recommend_only",
+  "transport": "mcp",
+  "server": "jira",
+  "project": null,
+  "checked_at": "2026-10-25T23:27:36.222863+00:00",
+  "mutations_attempted": 0,
+  "checks": [
+    {
+      "check": "mcp_initialization",
+      "passed": true,
+      "tool_count": 22
+    },
+    {
+      "check": "get_triage_current_user",
+      "passed": true,
+      "response_keys": [
+        "success",
+        "user"
+      ],
+      "returned_items": null
+    },
+    {
+      "check": "search_issues_page",
+      "passed": true,
+      "response_keys": [
+        "issues",
+        "jql",
+        "max_results",
+        "message",
+        "next_start_at",
+        "previous_start_at",
+        "start_at",
+        "success",
+        "total"
+      ],
+      "returned_items": null
+    },
+    {
+      "check": "get_field_info",
+      "passed": true,
+      "response_keys": [
+        "by_type",
+        "fields",
+        "message",
+        "query",
+        "success",
+        "summary"
+      ],
+      "returned_items": null
+    }
+  ],
+  "passed": true
+}
